@@ -19,48 +19,40 @@
                         <i class="fas fa-home"></i>{% trans "Início" %}
                     </a>
                 </li>
-                <li class="wiki-nav-item">
-                    <a href="{% url 'wiki:general' %}" {% if request.resolver_match.url_name == 'general' %}class="wiki-nav-link active"{% else %}class="wiki-nav-link"{% endif %}>
-                        <i class="fas fa-info-circle"></i>{% trans "Informações Gerais" %}
-                    </a>
-                </li>
-                <li class="wiki-nav-item">
-                    <a href="{% url 'wiki:rates' %}" {% if request.resolver_match.url_name == 'rates' %}class="wiki-nav-link active"{% else %}class="wiki-nav-link"{% endif %}>
-                        <i class="fas fa-chart-line"></i>{% trans "Taxas" %}
-                    </a>
-                </li>
-                <li class="wiki-nav-item">
-                    <a href="{% url 'wiki:raids' %}" {% if request.resolver_match.url_name == 'raids' %}class="wiki-nav-link active"{% else %}class="wiki-nav-link"{% endif %}>
-                        <i class="fas fa-dragon"></i>{% trans "Chefes de Raid" %}
-                    </a>
-                </li>
-                <li class="wiki-nav-item">
-                    <a href="{% url 'wiki:assistance' %}" {% if request.resolver_match.url_name == 'assistance' %}class="wiki-nav-link active"{% else %}class="wiki-nav-link"{% endif %}>
-                        <i class="fas fa-hands-helping"></i>{% trans "Assistência do Jogo" %}
-                    </a>
-                </li>
-                <li class="wiki-nav-item">
-                    <a href="{% url 'wiki:events' %}" {% if request.resolver_match.url_name == 'events' %}class="wiki-nav-link active"{% else %}class="wiki-nav-link"{% endif %}>
-                        <i class="fas fa-calendar-alt"></i>{% trans "Guia de Eventos" %}
-                    </a>
-                </li>
+                
+                <!-- Páginas do Menu -->
+                {% for item in pages %}
+                    {% if item.page.is_menu_item %}
+                    <li class="wiki-nav-item">
+                        <a href="{% url 'wiki:page' item.page.slug %}" {% if request.resolver_match.kwargs.slug == item.page.slug %}class="wiki-nav-link active"{% else %}class="wiki-nav-link"{% endif %}>
+                            {% if item.page.icon %}
+                                <i class="{{ item.page.icon }}"></i>
+                            {% else %}
+                                <i class="fas fa-book"></i>
+                            {% endif %}
+                            {{ item.translation.title }}
+                        </a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
                 <li class="wiki-nav-item">
                     <a href="{% url 'wiki:updates' %}" {% if request.resolver_match.url_name == 'updates' %}class="wiki-nav-link active"{% else %}class="wiki-nav-link"{% endif %}>
                         <i class="fas fa-sync"></i>{% trans "Atualizações" %}
                     </a>
                 </li>
+                
                 <li class="wiki-nav-item">
-                    <a href="{% url 'wiki:features' %}" {% if request.resolver_match.url_name == 'features' %}class="wiki-nav-link active"{% else %}class="wiki-nav-link"{% endif %}>
-                        <i class="fas fa-star"></i>{% trans "Recursos" %}
+                    <a href="{% url 'wiki:search' %}" {% if request.resolver_match.url_name == 'search' %}class="wiki-nav-link active"{% else %}class="wiki-nav-link"{% endif %}>
+                        <i class="fas fa-search"></i>{% trans "Buscar" %}
                     </a>
                 </li>
-                {% for item in pages %}
+                
                 <li class="wiki-nav-item">
-                    <a href="{% url 'wiki:page' item.page.slug %}" {% if request.resolver_match.kwargs.slug == item.page.slug %}class="wiki-nav-link active"{% else %}class="wiki-nav-link"{% endif %}>
-                        <i class="fas fa-book"></i>{{ item.translation.title }}
+                    <a href="{% url 'wiki:sitemap' %}" {% if request.resolver_match.url_name == 'sitemap' %}class="wiki-nav-link active"{% else %}class="wiki-nav-link"{% endif %}>
+                        <i class="fas fa-sitemap"></i>{% trans "Mapa do Site" %}
                     </a>
                 </li>
-                {% endfor %}
             </ul>
         </div>
     </div>

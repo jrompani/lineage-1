@@ -7,30 +7,19 @@ urlpatterns = [
     # Home
     path('public/wiki/', views.WikiHomeView.as_view(), name='home'),
     
-    # General Information
-    path('public/wiki/general/', views.WikiGeneralView.as_view(), name='general'),
-    path('public/wiki/general/<int:pk>/', views.WikiGeneralDetailView.as_view(), name='general_detail'),
+    # Updates (deve vir antes da URL genérica de páginas)
+    path('public/wiki/updates/', views.WikiUpdateListView.as_view(), name='updates'),
+    path('public/wiki/updates/<int:pk>/', views.WikiUpdateDetailView.as_view(), name='update_detail'),
     
-    # Rates
-    path('public/wiki/rates/', views.WikiRatesView.as_view(), name='rates'),
+    # Search (deve vir antes da URL genérica de páginas)
+    path('public/wiki/search/', views.WikiSearchView.as_view(), name='search'),
     
-    # Raids
-    path('public/wiki/raids/', views.WikiRaidsView.as_view(), name='raids'),
-    path('public/wiki/raids/<int:pk>/', views.WikiRaidDetailView.as_view(), name='raid_detail'),
+    # Sitemap (deve vir antes da URL genérica de páginas)
+    path('public/wiki/sitemap/', views.WikiSitemapView.as_view(), name='sitemap'),
     
-    # Assistance
-    path('public/wiki/assistance/', views.WikiAssistanceView.as_view(), name='assistance'),
+    # Pages by content type
+    path('public/wiki/type/<str:content_type>/', views.WikiPageListView.as_view(), name='pages_by_type'),
     
-    # Events
-    path('public/wiki/events/', views.WikiEventsView.as_view(), name='events'),
-    
-    # Updates
-    path('public/wiki/updates/', views.WikiUpdatesView.as_view(), name='updates'),
-    
-    # Features
-    path('public/wiki/features/', views.WikiFeaturesView.as_view(), name='features'),
-    
-    # Pages and Sections
+    # Individual pages (deve vir por último para não capturar URLs específicas)
     path('public/wiki/<slug:slug>/', views.WikiPageDetailView.as_view(), name='page'),
-    path('public/wiki/section/<int:pk>/', views.WikiSectionDetailView.as_view(), name='section'),
 ]
