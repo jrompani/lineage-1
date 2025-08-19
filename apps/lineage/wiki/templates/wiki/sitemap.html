@@ -1,5 +1,5 @@
 {% extends 'wiki/base.html' %}
-{% load static i18n %}
+{% load static i18n wiki_tags %}
 
 {% block title %}{% trans "Mapa do Site" %} - {% trans "Wiki" %}{% endblock %}
 
@@ -37,9 +37,7 @@
                                 <div class="card">
                                     <div class="card-body">
                                         <h5 class="card-title">
-                                            {% if page.icon %}
-                                                <i class="{{ page.icon }}"></i>
-                                            {% endif %}
+                                            <i class="{% get_page_icon page %}"></i>
                                             <a href="{% url 'wiki:page' page.slug %}" class="text-decoration-none">
                                                 {{ page.translations.first.title }}
                                             </a>

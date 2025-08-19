@@ -1,5 +1,5 @@
 {% extends 'wiki/base.html' %}
-{% load static i18n %}
+{% load static i18n wiki_tags %}
 
 {% block title %}{% trans "Wiki" %}{% endblock %}
 
@@ -27,9 +27,7 @@
                             <div class="card h-100">
                                 <div class="card-body">
                                     <h5 class="card-title">
-                                        {% if item.page.icon %}
-                                            <i class="{{ item.page.icon }}"></i>
-                                        {% endif %}
+                                        <i class="{% get_page_icon item.page %}"></i>
                                         {{ item.translation.title }}
                                     </h5>
                                     {% if item.translation.summary %}

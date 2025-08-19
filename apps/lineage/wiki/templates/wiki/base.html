@@ -1,5 +1,5 @@
 {% extends 'wiki/base-wiki.html' %}
-{% load static i18n %}
+{% load static i18n wiki_tags %}
 
 {% block extrahead %}
 <link rel="stylesheet" href="{% static 'default/css/wiki.css' %}">
@@ -24,14 +24,10 @@
                 {% for item in pages %}
                     {% if item.page.is_menu_item %}
                     <li class="wiki-nav-item">
-                        <a href="{% url 'wiki:page' item.page.slug %}" {% if request.resolver_match.kwargs.slug == item.page.slug %}class="wiki-nav-link active"{% else %}class="wiki-nav-link"{% endif %}>
-                            {% if item.page.icon %}
-                                <i class="{{ item.page.icon }}"></i>
-                            {% else %}
-                                <i class="fas fa-book"></i>
-                            {% endif %}
-                            {{ item.translation.title }}
-                        </a>
+                                            <a href="{% url 'wiki:page' item.page.slug %}" {% if request.resolver_match.kwargs.slug == item.page.slug %}class="wiki-nav-link active"{% else %}class="wiki-nav-link"{% endif %}>
+                        <i class="{% get_page_icon item.page %}"></i>
+                        {{ item.translation.title }}
+                    </a>
                     </li>
                     {% endif %}
                 {% endfor %}

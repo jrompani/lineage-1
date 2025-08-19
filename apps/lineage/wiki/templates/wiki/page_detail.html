@@ -1,5 +1,5 @@
 {% extends 'wiki/base.html' %}
-{% load static i18n %}
+{% load static i18n wiki_tags %}
 
 {% block title %}{{ translation.title }} - {% trans "Wiki" %}{% endblock %}
 
@@ -9,9 +9,7 @@
     <div class="page-header mb-4">
         <div class="page-title-section">
             <h1 class="page-title">
-                {% if page.icon %}
-                    <i class="{{ page.icon }}"></i>
-                {% endif %}
+                <i class="{% get_page_icon page %}"></i>
                 {{ translation.title }}
             </h1>
             {% if translation.subtitle %}

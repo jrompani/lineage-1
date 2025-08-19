@@ -52,7 +52,7 @@ class WikiPageTranslationInline(BaseInlineAdmin):
 @admin.register(WikiPage)
 class WikiPageAdmin(BaseModelAdmin):
     """Admin para gerenciar todas as páginas do Wiki"""
-    list_display = ('get_title', 'content_type', 'slug', 'order', 'is_active', 'is_menu_item', 'get_languages', 'created_at')
+    list_display = ('get_title', 'content_type', 'slug', 'order', 'is_active', 'is_menu_item', 'get_icon_display', 'get_languages', 'created_at')
     list_filter = ('is_active', 'is_menu_item', 'content_type', 'created_at')
     search_fields = ('translations__title', 'translations__content', 'translations__summary')
     ordering = ('order', 'content_type', 'id')
@@ -65,13 +65,41 @@ class WikiPageAdmin(BaseModelAdmin):
             'description': _('Configure o tipo, slug e visibilidade da página')
         }),
         (_('Navegação'), {
-            'fields': ('parent_page', 'icon'),
-            'description': _('Configure a hierarquia e ícone da página'),
+            'fields': ('parent_page',),
+            'description': _('Configure a hierarquia da página. O ícone será definido automaticamente baseado no tipo de conteúdo.'),
             'classes': ('collapse',)
         }),
     )
     
-    actions = ['activate_pages', 'deactivate_pages', 'make_menu_items', 'remove_menu_items', 'reorder_pages']
+    actions = ['activate_pages', 'deactivate_pages', 'make_menu_items', 'remove_menu_items', 'reorder_pages', 'set_default_icons']
+    
+    # Mapeamento de ícones por tipo de conteúdo
+    CONTENT_TYPE_ICONS = {
+        'index': 'fas fa-home',
+        'about': 'fas fa-info-circle',
+        'rules': 'fas fa-gavel',
+        'commands': 'fas fa-terminal',
+        'classes': 'fas fa-user-shield',
+        'races': 'fas fa-users',
+        'noblesse': 'fas fa-crown',
+        'subclass': 'fas fa-layer-group',
+        'hero': 'fas fa-star',
+        'clan': 'fas fa-flag',
+        'siege': 'fas fa-shield-alt',
+        'olympiad': 'fas fa-trophy',
+        'castle': 'fas fa-chess-rook',
+        'fortress': 'fas fa-chess-king',
+        'territory': 'fas fa-map-marked-alt',
+        'events': 'fas fa-calendar-alt',
+        'updates': 'fas fa-sync-alt',
+        'features': 'fas fa-puzzle-piece',
+        'rates': 'fas fa-percentage',
+        'raids': 'fas fa-dragon',
+        'assistance': 'fas fa-life-ring',
+        'guide': 'fas fa-book-open',
+        'faq': 'fas fa-question-circle',
+        'other': 'fas fa-file-alt',
+    }
 
     def get_title(self, obj):
         """Retorna o título em português ou o primeiro disponível"""
@@ -87,6 +115,16 @@ class WikiPageAdmin(BaseModelAdmin):
             )
         return _('Sem tradução')
     get_title.short_description = _('Título')
+
+    def get_icon_display(self, obj):
+        """Exibe o ícone atual da página"""
+        icon = obj.icon or self.CONTENT_TYPE_ICONS.get(obj.content_type, 'fas fa-file-alt')
+        return format_html(
+            '<i class="{}" style="color: #e6c77d; font-size: 16px;" title="{}"></i>',
+            icon,
+            icon
+        )
+    get_icon_display.short_description = _('Ícone')
 
     def get_languages(self, obj):
         """Mostra os idiomas disponíveis"""
@@ -135,6 +173,24 @@ class WikiPageAdmin(BaseModelAdmin):
             page.save()
         self.message_user(request, _('Ordem das páginas foi reorganizada.'))
     reorder_pages.short_description = _('Reorganizar ordem')
+
+    def set_default_icons(self, request, queryset):
+        """Define ícones padrão baseado no tipo de conteúdo"""
+        updated = 0
+        for page in queryset:
+            default_icon = self.CONTENT_TYPE_ICONS.get(page.content_type, 'fas fa-file-alt')
+            if page.icon != default_icon:
+                page.icon = default_icon
+                page.save()
+                updated += 1
+        self.message_user(request, _('{} páginas tiveram seus ícones atualizados.').format(updated))
+    set_default_icons.short_description = _('Definir ícones padrão')
+
+    def save_model(self, request, obj, form, change):
+        """Define ícone padrão automaticamente se não estiver definido"""
+        if not obj.icon:
+            obj.icon = self.CONTENT_TYPE_ICONS.get(obj.content_type, 'fas fa-file-alt')
+        super().save_model(request, obj, form, change)
 
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related('translations')
