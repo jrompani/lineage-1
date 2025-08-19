@@ -1,9 +1,10 @@
 {% extends 'wiki/base.html' %}
 {% load static i18n %}
 
-{% block title %}{{ page.translation.title }} - {% trans "Wiki" %}{% endblock %}
+{% block title %}{{ translation.title }} - {% trans "Wiki" %}{% endblock %}
 
 {% block wiki_content %}
+{% if translation %}
 <div class="wiki-page-detail">
     <div class="page-header mb-4">
         <div class="page-title-section">
@@ -11,10 +12,10 @@
                 {% if page.icon %}
                     <i class="{{ page.icon }}"></i>
                 {% endif %}
-                {{ page.translation.title }}
+                {{ translation.title }}
             </h1>
-            {% if page.translation.subtitle %}
-                <p class="page-subtitle">{{ page.translation.subtitle }}</p>
+            {% if translation.subtitle %}
+                <p class="page-subtitle">{{ translation.subtitle }}</p>
             {% endif %}
             <div class="page-meta">
                 <span class="badge bg-secondary">{{ content_type_display }}</span>
@@ -26,17 +27,17 @@
     </div>
 
     <div class="page-content">
-        {% if page.translation.summary %}
+        {% if translation.summary %}
         <div class="page-summary mb-4">
             <div class="alert alert-info">
                 <i class="fas fa-info-circle"></i>
-                <strong>{% trans "Resumo" %}:</strong> {{ page.translation.summary }}
+                <strong>{% trans "Resumo" %}:</strong> {{ translation.summary }}
             </div>
         </div>
         {% endif %}
 
         <div class="content-body">
-            {{ page.translation.content|safe }}
+            {{ translation.content|safe }}
         </div>
     </div>
 
@@ -57,4 +58,19 @@
     </div>
     {% endif %}
 </div>
+{% else %}
+<div class="wiki-page-detail">
+    <div class="page-header mb-4">
+        <div class="page-title-section">
+            <h1 class="page-title">
+                <i class="fas fa-exclamation-triangle"></i>
+                {% trans "Tradução não disponível" %}
+            </h1>
+            <p class="page-description">
+                {% trans "Esta página não possui tradução para o idioma atual." %}
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

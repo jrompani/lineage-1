@@ -83,7 +83,13 @@ class WikiPageDetailView(WikiPagesMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        language = get_language()
+        
+        # Get the translation for the current language
+        translation = self.object.translations.filter(language=language).first()
+        context['translation'] = translation
         context['content_type_display'] = self.object.get_content_type_display()
+        
         return context
 
 
