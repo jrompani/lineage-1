@@ -4,6 +4,32 @@
 
 {% block extrastyle %}
 <link rel="stylesheet" href="{% static 'css/reports.css' %}">
+<style>
+.no-bonus-message {
+    text-align: center;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px dashed #dee2e6;
+}
+
+.no-bonus-message i {
+    font-size: 2rem;
+    color: #6c757d;
+    margin-bottom: 10px;
+}
+
+.no-bonus-message p {
+    margin: 0 0 5px 0;
+    color: #495057;
+    font-weight: 500;
+}
+
+.no-bonus-message small {
+    color: #6c757d;
+    font-style: italic;
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -123,27 +149,29 @@
           </div>
           <div class="reports-card-body">
             <div class="bonus-info">
-              <div class="bonus-rules">
-                <h4>{% trans "Como Funciona" %}</h4>
-                <ul class="bonus-list">
-                  <li>
-                    <i class="fas fa-star"></i>
-                    {% trans "Compras acima de R$ 10,00 ganham 5% de bônus" %}
-                  </li>
-                  <li>
-                    <i class="fas fa-star"></i>
-                    {% trans "Compras acima de R$ 25,00 ganham 10% de bônus" %}
-                  </li>
-                  <li>
-                    <i class="fas fa-star"></i>
-                    {% trans "Compras acima de R$ 50,00 ganham 15% de bônus" %}
-                  </li>
-                  <li>
-                    <i class="fas fa-star"></i>
-                    {% trans "Compras acima de R$ 100,00 ganham 20% de bônus" %}
-                  </li>
-                </ul>
-              </div>
+                             <div class="bonus-rules">
+                 <h4>{% trans "Como Funciona" %}</h4>
+                 {% if bonus_configurados %}
+                   <ul class="bonus-list">
+                     {% for bonus in bonus_configurados %}
+                       <li>
+                         <i class="fas fa-star"></i>
+                         {% if bonus.valor_maximo %}
+                           {% trans "Compras de R$" %} {{ bonus.valor_minimo|floatformat:2 }} {% trans "a R$" %} {{ bonus.valor_maximo|floatformat:2 }} {% trans "ganham" %} {{ bonus.bonus_percentual|floatformat:0 }}% {% trans "de bônus" %}
+                         {% else %}
+                           {% trans "Compras acima de R$" %} {{ bonus.valor_minimo|floatformat:2 }} {% trans "ganham" %} {{ bonus.bonus_percentual|floatformat:0 }}% {% trans "de bônus" %}
+                         {% endif %}
+                       </li>
+                     {% endfor %}
+                   </ul>
+                 {% else %}
+                   <div class="no-bonus-message">
+                     <i class="fas fa-info-circle"></i>
+                     <p>{% trans "Nenhuma promoção ativa no momento" %}</p>
+                     <small>{% trans "Fique atento às nossas promoções especiais!" %}</small>
+                   </div>
+                 {% endif %}
+               </div>
               
               <div class="bonus-calculator">
                 <div id="bonus-info">
@@ -246,20 +274,20 @@ document.getElementById('valor').addEventListener('input', function() {
                                     <i class="fas fa-gift"></i>
                                     <h5>{% trans "Bônus Disponível!" %}</h5>
                                 </div>
-                                <div class="bonus-details">
-                                    <div class="bonus-amount">
-                                        <span class="bonus-value">+${data.bonus_percentual}%</span>
-                                        <span class="bonus-description">{% trans "de bônus" %}</span>
-                                    </div>
-                                    <div class="bonus-description">
-                                        <p>${data.descricao}</p>
-                                    </div>
-                                </div>
+                                                                 <div class="bonus-details">
+                                     <div class="bonus-amount">
+                                         <span class="bonus-value">+${data.bonus_percentual || 0}%</span>
+                                         <span class="bonus-description">{% trans "de bônus" %}</span>
+                                     </div>
+                                     <div class="bonus-description">
+                                         <p>${data.descricao_bonus || ''}</p>
+                                     </div>
+                                 </div>
                             </div>
                         `;
                         
-                        // Atualiza o resumo com bônus
-                        updatePurchaseSummaryWithBonus(valor, data.bonus_percentual);
+                                                 // Atualiza o resumo com bônus
+                         updatePurchaseSummaryWithBonus(valor, data.bonus_percentual || 0);
                     } else {
                         bonusInfo.innerHTML = `
                             <div class="bonus-no-bonus">
@@ -305,15 +333,16 @@ document.getElementById('valor').addEventListener('input', function() {
 });
 
 function updatePurchaseSummary(valor) {
-    const moedasBase = Math.floor(valor * 100); // 1 real = 100 moedas
+    const moedasBase = Math.floor(valor * 1); // 1 real = 1 moeda (conversão 1:1)
     document.getElementById('valor-compra').textContent = `R$ ${valor.toFixed(2)}`;
     document.getElementById('moedas-recebidas').textContent = `${moedasBase} moedas`;
     document.getElementById('total-moedas').textContent = `${moedasBase} moedas`;
 }
 
 function updatePurchaseSummaryWithBonus(valor, bonusPercentual) {
-    const moedasBase = Math.floor(valor * 100);
-    const bonusMoedas = Math.floor(moedasBase * (bonusPercentual / 100));
+    const moedasBase = Math.floor(valor * 1);
+    const bonusPercentualNum = parseFloat(bonusPercentual) || 0;
+    const bonusMoedas = Math.floor(moedasBase * (bonusPercentualNum / 100));
     const totalMoedas = moedasBase + bonusMoedas;
     
     document.getElementById('valor-compra').textContent = `R$ ${valor.toFixed(2)}`;

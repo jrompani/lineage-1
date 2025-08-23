@@ -35,9 +35,9 @@ def calcular_bonus_ajax(request):
             'success': True,
             'valor_compra': float(valor),
             'valor_bonus': float(valor_bonus),
-            'percentual_bonus': float(percentual_bonus),
+            'bonus_percentual': float(percentual_bonus),
             'total_creditado': float(total_creditado),
-            'descricao_bonus': descricao_bonus,
+            'descricao_bonus': descricao_bonus or '',
             'tem_bonus': valor_bonus > 0
         })
         
@@ -107,7 +107,13 @@ def criar_ou_reaproveitar_pedido(request):
 
             return redirect('payment:detalhes_pedido', pedido_id=novo_pedido.id)
 
-    return render(request, "payment/purchase.html")
+    # Buscar bônus configurados para exibir no template
+    from apps.lineage.wallet.models import CoinPurchaseBonus
+    bonus_configurados = CoinPurchaseBonus.objects.filter(ativo=True).order_by('ordem', 'valor_minimo')
+    
+    return render(request, "payment/purchase.html", {
+        'bonus_configurados': bonus_configurados
+    })
 
 
 @conditional_otp_required

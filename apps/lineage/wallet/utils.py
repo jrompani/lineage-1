@@ -17,7 +17,7 @@ def calcular_bonus_compra(valor_compra):
     bonus = CoinPurchaseBonus.obter_bonus_para_valor(valor_compra)
     
     if not bonus:
-        return Decimal('0.00'), None, Decimal('0.00')
+        return Decimal('0.00'), '', Decimal('0.00')
     
     valor_bonus = bonus.calcular_bonus(valor_compra)
     return valor_bonus, bonus.descricao, bonus.bonus_percentual
