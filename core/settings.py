@@ -22,6 +22,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # System Version
 VERSION = '1.14.10'
 
+# =========================== THEME CONFIGURATION ===========================
+
+# Control whether to display theme errors to users
+# Set to False in production to only log errors without showing them to users
+SHOW_THEME_ERRORS_TO_USERS = str2bool(os.environ.get('SHOW_THEME_ERRORS_TO_USERS', True))
+
 # Enable/Disable DEBUG Mode
 DEBUG = str2bool(os.environ.get('DEBUG', False))
 
