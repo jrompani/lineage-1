@@ -40,6 +40,7 @@ class ResourceAccessMiddleware:
             '/sitemap.xml',
             '/health/',
             '/api/',  # APIs geralmente não precisam de verificação de recursos
+            '/themes/',  # Arquivos de tema
         ]
         
         # Mapeamento de caminhos de URL para recursos
