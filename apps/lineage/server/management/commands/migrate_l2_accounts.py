@@ -69,14 +69,14 @@ class Command(BaseCommand):
         try:
             sql = """
                 SELECT login, 
-                       l2email as email,
+                       email as email,
                        accessLevel, 
                        created_time
                 FROM accounts 
-                WHERE l2email IS NOT NULL 
-                AND l2email != '' 
-                AND l2email != 'NULL' 
-                AND LENGTH(TRIM(l2email)) > 0
+                WHERE email IS NOT NULL 
+                AND email != '' 
+                AND email != 'NULL' 
+                AND LENGTH(TRIM(email)) > 0
                 ORDER BY created_time ASC
             """
             

@@ -125,14 +125,50 @@ class NewsAdmin(BaseModelAdmin):
             instance.save()
         formset.save_m2m()
         
-        # Generate slug after translations are saved
+        # Generate or validate slug after translations are saved
         news_obj = form.instance
-        if not news_obj.slug:
-            from django.utils.text import slugify
-            pt_translation = news_obj.translations.filter(language='pt').first()
-            if pt_translation:
-                news_obj.slug = slugify(pt_translation.title)
+        from django.utils.text import slugify
+        pt_translation = news_obj.translations.filter(language='pt').first()
+        
+        if pt_translation:
+            if not news_obj.slug:
+                # Auto-generate slug from title
+                base_slug = slugify(pt_translation.title)
+                news_obj.slug = self._get_unique_slug(base_slug, news_obj.pk)
                 news_obj.save()
+            else:
+                # Validate manually entered slug and make it unique if needed
+                current_slug = news_obj.slug
+                unique_slug = self._get_unique_slug(current_slug, news_obj.pk)
+                if current_slug != unique_slug:
+                    news_obj.slug = unique_slug
+                    news_obj.save()
+                    # Add a message to inform the user about the slug change
+                    from django.contrib import messages
+                    messages.warning(
+                        request,
+                        _('O slug foi alterado de "{}" para "{}" para evitar duplicação.').format(
+                            current_slug, unique_slug
+                        )
+                    )
+
+    def _get_unique_slug(self, base_slug, news_pk=None):
+        """Generate a unique slug by appending a number if necessary"""
+        slug = base_slug
+        counter = 1
+        
+        while True:
+            # Check if slug exists, excluding current news object if editing
+            queryset = News.objects.filter(slug=slug)
+            if news_pk:
+                queryset = queryset.exclude(pk=news_pk)
+            
+            if not queryset.exists():
+                return slug
+            
+            # If slug exists, append counter and try again
+            slug = f"{base_slug}-{counter}"
+            counter += 1
 
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related('translations')

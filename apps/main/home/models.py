@@ -231,6 +231,9 @@ class PerfilGamer(BaseModel):
             return True
         return False
 
+    def __str__(self):
+        return f"Perfil Gamer de {self.user.username} - Nível {self.level}"
+
 
 class Conquista(BaseModel):
     nome = models.CharField(max_length=100, verbose_name=_("Nome"))
@@ -255,3 +258,6 @@ class ConquistaUsuario(BaseModel):
         unique_together = ('usuario', 'conquista')
         verbose_name = _('Conquista de Usuário')
         verbose_name_plural = _('Conquistas de Usuários')
+
+    def __str__(self):
+        return f"{self.usuario.username} - {self.conquista.nome}"

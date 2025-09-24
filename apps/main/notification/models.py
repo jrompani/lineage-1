@@ -71,6 +71,9 @@ class PublicNotificationView(BaseModel):
         verbose_name = _("Visualização de Notificação Pública")
         verbose_name_plural = _("Visualizações de Notificações Públicas")
 
+    def __str__(self):
+        return f"{self.user.username} - {self.notification.message[:30]}..."
+
 
 class PushSubscription(BaseModel):
     user = models.ForeignKey(
