@@ -352,7 +352,7 @@
                                                      <a href="{% url 'message:friends_list' %}" class="action-btn header-btn" style="background: linear-gradient(45deg, #20c997, #17a2b8);">
                  <i class="fas fa-users me-1"></i>{% trans "Amigos" %}
                </a>
-                           <a href="/app/downloads/" class="action-btn header-btn" style="background: linear-gradient(45deg, #dc3545, #fd7e14);">
+                           <a href="{% url 'downloads:internal_download_list' %}" class="action-btn header-btn" style="background: linear-gradient(45deg, #dc3545, #fd7e14);">
                 <i class="fas fa-download me-1"></i>{% trans "Download" %}
               </a>
            </div>
