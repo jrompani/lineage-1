@@ -63,6 +63,8 @@ services:
     volumes:
       - logs_data:/usr/src/app/logs
     command: celery -A core worker
+    init: true
+    stop_grace_period: 60s
     depends_on:
       - redis
       - site_http
@@ -88,9 +90,11 @@ services:
     volumes:
       - logs_data:/usr/src/app/logs
     command: celery -A core beat
+    init: true
+    stop_grace_period: 60s
     depends_on:
       - redis
-      - site
+      - site_http
 
   flower:
     container_name: flower
@@ -106,6 +110,8 @@ services:
     volumes:
       - logs_data:/usr/src/app/logs
     command: celery -A core.celery flower --persistent=True --db="flower_db" --url-prefix=flower
+    init: true
+    stop_grace_period: 60s
     depends_on:
       - redis
       - site_http
