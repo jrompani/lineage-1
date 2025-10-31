@@ -59,7 +59,12 @@ legacy_filters=(
   "name=redis"
 )
 
-containers=$(docker ps -a -q ${legacy_filters[@]})
+filters_args=()
+for f in "${legacy_filters[@]}"; do
+  filters_args+=(--filter "$f")
+done
+
+containers=$(docker ps -a -q "${filters_args[@]}")
 if [ -n "$containers" ]; then
   docker rm -f $containers || echo "Some legacy containers could not be removed (maybe already removed)"
 else
