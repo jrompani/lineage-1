@@ -40,7 +40,7 @@ services:
       - static_data:/usr/src/app/staticfiles
       - media_data:/usr/src/app/media
       - ./themes:/usr/src/app/themes/installed/
-    command: daphne -b 0.0.0.0 -p 5005 --shutdown-timeout 60 core.asgi:application
+    command: daphne -b 0.0.0.0 -p 5005 --application-close-timeout 60 core.asgi:application
     init: true
     stop_grace_period: 60s
     environment:
