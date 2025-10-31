@@ -114,18 +114,25 @@ class TransacaoBonusAdmin(BaseModelAdmin):
 
 @admin.register(CoinConfig)
 class CoinConfigAdmin(BaseModelAdmin):
-    list_display = ('nome', 'coin_id', 'multiplicador', 'ativa', 'created_at')
-    list_filter = ('ativa', 'multiplicador', 'created_at')
+    list_display = (
+        'nome', 'coin_id', 'multiplicador', 'ativa',
+        'exibir_opcao_bonus_transferencia', 'habilitar_transferencia_com_bonus',
+        'created_at'
+    )
+    list_filter = ('ativa', 'multiplicador', 'exibir_opcao_bonus_transferencia', 'habilitar_transferencia_com_bonus', 'created_at')
     search_fields = ('nome', 'coin_id')
     ordering = ('nome',)
-    list_editable = ('ativa', 'multiplicador')
+    list_editable = ('ativa', 'multiplicador', 'exibir_opcao_bonus_transferencia', 'habilitar_transferencia_com_bonus')
     
     fieldsets = (
         (_('Informações da Moeda'), {
             'fields': ('nome', 'coin_id')
         }),
         (_('Configurações'), {
-            'fields': ('multiplicador', 'ativa'),
+            'fields': (
+                'multiplicador', 'ativa',
+                'exibir_opcao_bonus_transferencia', 'habilitar_transferencia_com_bonus'
+            ),
             'description': _('Configure o multiplicador e status da moeda')
         }),
     )

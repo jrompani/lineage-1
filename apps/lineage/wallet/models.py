@@ -69,6 +69,12 @@ class CoinConfig(BaseModel):
         _("Multiplicador (ex: 2.0 para 2x)"), max_digits=5, decimal_places=2, default=1.0
     )
     ativa = models.BooleanField(_("Moeda Ativa"), default=True)
+    habilitar_transferencia_com_bonus = models.BooleanField(
+        _("Permitir transferência usando saldo bônus"), default=False
+    )
+    exibir_opcao_bonus_transferencia = models.BooleanField(
+        _("Exibir opção de usar saldo bônus na transferência"), default=False
+    )
 
     class Meta:
         verbose_name = _("Configuração de Moeda")

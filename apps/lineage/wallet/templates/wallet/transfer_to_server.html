@@ -432,12 +432,44 @@
             <span class="user-info-label">{% trans "Saldo atual:" %}</span>
             <span class="user-info-value balance">R$ {{ wallet.saldo|floatformat:2 }}</span>
           </div>
+          {% if show_bonus_option %}
+          <div class="user-info-item">
+            <span class="user-info-label">{% trans "Saldo bônus:" %}</span>
+            <span class="user-info-value" style="color:#0ea5e9; font-weight:700;">R$ {{ wallet.saldo_bonus|floatformat:2 }}</span>
+          </div>
+          {% endif %}
         </div>
         
         <!-- Formulário -->
         <form method="post" novalidate>
           {% csrf_token %}
           
+          {% if show_bonus_option %}
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-exchange-alt me-2"></i>{% trans "Origem do Saldo" %}
+            </label>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="origem_saldo" id="origem_normal" value="normal" checked>
+              <label class="form-check-label" for="origem_normal">
+                {% trans "Saldo normal" %}
+              </label>
+            </div>
+            {% if bonus_enabled %}
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="origem_saldo" id="origem_bonus" value="bonus">
+              <label class="form-check-label" for="origem_bonus">
+                {% trans "Saldo bônus" %}
+              </label>
+            </div>
+            {% else %}
+            <div class="form-text text-muted" style="margin-top: .25rem;">
+              {% trans "Transferência usando saldo bônus está desabilitada pelo administrador." %}
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
           <div class="form-group">
             <label class="form-label">
               <i class="fas fa-user me-2"></i>{% trans "Selecione o Personagem" %}
@@ -459,6 +491,7 @@
               <input type="number" step="0.01" name="valor" class="form-control" min="1.00" max="1000.00" placeholder="0.00" required>
             </div>
             <small class="form-text text-muted">{% trans "Valor mínimo: R$ 1,00 | Valor máximo: R$ 1.000,00" %}</small>
+            <div id="valor-feedback" class="form-text" style="margin-top:.25rem;"></div>
           </div>
 
           <div class="form-group">
@@ -473,7 +506,7 @@
             </div>
           </div>
 
-          <button type="submit" class="btn-transfer">
+          <button type="submit" class="btn-transfer" id="btn-transfer" disabled>
             <i class="fas fa-check-circle me-2"></i> {% trans "Confirmar Transferência" %}
           </button>
         </form>
@@ -502,6 +535,43 @@ function togglePassword(inputId) {
 document.addEventListener('DOMContentLoaded', function() {
   const form = document.querySelector('form');
   const valorInput = document.querySelector('input[name="valor"]');
+  const origemNormal = document.getElementById('origem_normal');
+  const origemBonus = document.getElementById('origem_bonus');
+  const btnTransfer = document.getElementById('btn-transfer');
+  const feedback = document.getElementById('valor-feedback');
+
+  const SALDO_NORMAL = parseFloat('{{ wallet.saldo|floatformat:2|default:"0.00"|escapejs }}'.replace(',', '.')) || 0;
+  const SALDO_BONUS = parseFloat('{{ wallet.saldo_bonus|floatformat:2|default:"0.00"|escapejs }}'.replace(',', '.')) || 0;
+
+  function saldoDisponivelAtual() {
+    {% if show_bonus_option %}
+    if (origemBonus && origemBonus.checked) return SALDO_BONUS;
+    {% endif %}
+    return SALDO_NORMAL;
+  }
+
+  function updateSubmitState() {
+    const raw = (valorInput.value || '').toString().replace(',', '.');
+    const valor = parseFloat(raw);
+    const saldo = saldoDisponivelAtual();
+
+    let msg = '';
+    let canSubmit = true;
+
+    if (isNaN(valor)) {
+      canSubmit = false;
+    } else {
+      if (valor < 1.00) { canSubmit = false; msg = '{% trans "O valor mínimo é R$ 1,00" %}'; }
+      if (valor > 1000.00) { canSubmit = false; msg = '{% trans "O valor máximo é R$ 1.000,00" %}'; }
+      if (valor > saldo) { canSubmit = false; msg = '{% trans "Saldo insuficiente para esta transferência" %}'; }
+    }
+
+    if (btnTransfer) btnTransfer.disabled = !canSubmit;
+    if (feedback) {
+      feedback.textContent = msg || '';
+      feedback.style.color = msg ? '#dc2626' : '#6c757d';
+    }
+  }
   
   form.addEventListener('submit', function(e) {
     const valor = parseFloat(valorInput.value);
@@ -520,13 +590,36 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    if (valor > {{ wallet.saldo }}) {
+    {% if show_bonus_option %}
+    let saldoDisponivel = SALDO_NORMAL;
+    if (origemBonus && origemBonus.checked) {
+      saldoDisponivel = SALDO_BONUS;
+    }
+    if (valor > saldoDisponivel) {
       e.preventDefault();
       alert('{% trans "Saldo insuficiente para realizar esta transferência" %}');
       valorInput.focus();
       return;
     }
+    {% else %}
+    if (valor > SALDO_NORMAL) {
+      e.preventDefault();
+      alert('{% trans "Saldo insuficiente para realizar esta transferência" %}');
+      valorInput.focus();
+      return;
+    }
+    {% endif %}
   });
+
+  valorInput.addEventListener('input', updateSubmitState);
+  valorInput.addEventListener('change', updateSubmitState);
+  {% if show_bonus_option %}
+  if (origemNormal) origemNormal.addEventListener('change', updateSubmitState);
+  if (origemBonus) origemBonus.addEventListener('change', updateSubmitState);
+  {% endif %}
+
+  // Inicializa estado do botão ao carregar
+  updateSubmitState();
   
   // Formatação do valor
   valorInput.addEventListener('input', function() {

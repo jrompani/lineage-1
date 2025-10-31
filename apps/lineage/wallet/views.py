@@ -8,7 +8,7 @@ from decimal import Decimal
 from django.contrib.auth import authenticate
 from apps.main.home.models import User
 from django.db import transaction, models
-from .signals import aplicar_transacao
+from .signals import aplicar_transacao, aplicar_transacao_bonus
 from apps.lineage.server.database import LineageDB
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.http import require_http_methods
@@ -98,6 +98,7 @@ def transfer_to_server(request):
         nome_personagem = request.POST.get('personagem')
         valor = request.POST.get('valor')
         senha = request.POST.get('senha')
+        origem_saldo = request.POST.get('origem_saldo', 'normal')  # 'normal' | 'bonus'
 
         COIN_ID = config.coin_id
         multiplicador = config.multiplicador
@@ -117,9 +118,18 @@ def transfer_to_server(request):
             messages.error(request, 'Senha incorreta.')
             return redirect('wallet:dashboard')
 
-        if wallet.saldo < valor:
-            messages.error(request, 'Saldo insuficiente.')
-            return redirect('wallet:dashboard')
+        # Validação de saldo conforme origem selecionada
+        if origem_saldo == 'bonus':
+            if not getattr(config, 'habilitar_transferencia_com_bonus', False):
+                messages.error(request, _('Transferência usando saldo bônus está desabilitada.'))
+                return redirect('wallet:dashboard')
+            if wallet.saldo_bonus < valor:
+                messages.error(request, _('Saldo bônus insuficiente.'))
+                return redirect('wallet:dashboard')
+        else:
+            if wallet.saldo < valor:
+                messages.error(request, _('Saldo insuficiente.'))
+                return redirect('wallet:dashboard')
 
         # Confirma se o personagem pertence à conta
         personagem = TransferFromWalletToChar.find_char(request.user.username, nome_personagem)
@@ -134,14 +144,25 @@ def transfer_to_server(request):
 
         try:
             with transaction.atomic():
-                aplicar_transacao(
-                    wallet=wallet,
-                    tipo="SAIDA",
-                    valor=valor,
-                    descricao="Transferência para o servidor",
-                    origem=request.user.username,
-                    destino=nome_personagem
-                )
+                # Registra a saída na carteira escolhida
+                if origem_saldo == 'bonus':
+                    aplicar_transacao_bonus(
+                        wallet=wallet,
+                        tipo="SAIDA",
+                        valor=valor,
+                        descricao="Transferência para o servidor (bônus)",
+                        origem=request.user.username,
+                        destino=nome_personagem
+                    )
+                else:
+                    aplicar_transacao(
+                        wallet=wallet,
+                        tipo="SAIDA",
+                        valor=valor,
+                        descricao="Transferência para o servidor",
+                        origem=request.user.username,
+                        destino=nome_personagem
+                    )
 
                 sucesso = TransferFromWalletToChar.insert_coin(
                     char_name=nome_personagem,
@@ -159,12 +180,17 @@ def transfer_to_server(request):
         perfil = PerfilGamer.objects.get(user=request.user)
         perfil.adicionar_xp(40)
 
-        messages.success(request, f"R${valor:.2f} transferidos com sucesso para o personagem {nome_personagem}.")
+        if origem_saldo == 'bonus':
+            messages.success(request, _(f"R${valor:.2f} do bônus transferidos com sucesso para o personagem {nome_personagem}."))
+        else:
+            messages.success(request, _(f"R${valor:.2f} transferidos com sucesso para o personagem {nome_personagem}."))
         return redirect('wallet:dashboard')
 
     return render(request, 'wallet/transfer_to_server.html', {
         'wallet': wallet,
         'personagens': personagens,
+        'show_bonus_option': getattr(config, 'exibir_opcao_bonus_transferencia', False),
+        'bonus_enabled': getattr(config, 'habilitar_transferencia_com_bonus', False),
     })
 
 
