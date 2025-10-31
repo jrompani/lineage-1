@@ -103,7 +103,7 @@ def criar_ou_reaproveitar_pedido(request):
                 status='PENDENTE'
             )
 
-            perfil = PerfilGamer.objects.get(user=request.user)
+            perfil, _ = PerfilGamer.objects.get_or_create(user=request.user)
             perfil.adicionar_xp(40)
 
             return redirect('payment:detalhes_pedido', pedido_id=novo_pedido.id)
@@ -153,7 +153,12 @@ def confirmar_pagamento(request, pedido_id):
             )
 
             if pedido.metodo == "MercadoPago":
-                sdk = mercadopago.SDK(settings.MERCADO_PAGO_ACCESS_TOKEN)
+                # Valida token antes de chamar o SDK
+                access_token = getattr(settings, 'MERCADO_PAGO_ACCESS_TOKEN', None)
+                if not access_token:
+                    return HttpResponse("Configuração ausente: MERCADO_PAGO_ACCESS_TOKEN", status=500)
+
+                sdk = mercadopago.SDK(access_token)
                 pending_url = request.build_absolute_uri(
                     reverse('payment:pagamento_pendente')
                 ) + f"?pagamento_id={pagamento.id}&pedido_id={pedido.id}"
@@ -179,15 +184,31 @@ def confirmar_pagamento(request, pedido_id):
                     "metadata": {"pagamento_id": pagamento.id}
                 }
 
-                preference_response = sdk.preference().create(preference_data)
-                if preference_response.get("status") != 201:
-                    return HttpResponse("Erro ao criar preferência de pagamento", status=500)
+                try:
+                    preference_response = sdk.preference().create(preference_data)
+                except Exception as e:
+                    return HttpResponse(f"Erro ao criar preferência de pagamento: {str(e)}", status=500)
+
+                status_code = preference_response.get("status")
+                if status_code != 201:
+                    # Extrai mensagem detalhada da API do Mercado Pago, se houver
+                    response_body = preference_response.get("response", {}) or {}
+                    message = response_body.get('message') or response_body.get('error') or 'Falha desconhecida no Mercado Pago'
+                    cause = None
+                    if isinstance(response_body, dict):
+                        causes = response_body.get('cause') or response_body.get('causes')
+                        if isinstance(causes, list) and len(causes) > 0:
+                            cause = causes[0].get('description') or causes[0].get('code')
+                    detail = f"{message}"
+                    if cause:
+                        detail += f" - {cause}"
+                    return HttpResponse(f"Erro ao criar preferência de pagamento (HTTP {status_code}): {detail}", status=500)
 
                 preference = preference_response.get("response", {})
                 pagamento.transaction_code = preference["id"]
                 pagamento.save()
 
-                perfil = PerfilGamer.objects.get(user=request.user)
+                perfil, _ = PerfilGamer.objects.get_or_create(user=request.user)
                 perfil.adicionar_xp(100)
 
                 return redirect(preference["init_point"])
@@ -212,7 +233,7 @@ def confirmar_pagamento(request, pedido_id):
                 pagamento.transaction_code = session.id
                 pagamento.save()
 
-                perfil = PerfilGamer.objects.get(user=request.user)
+                perfil, _ = PerfilGamer.objects.get_or_create(user=request.user)
                 perfil.adicionar_xp(100)
 
                 return redirect(session.url, code=303)
