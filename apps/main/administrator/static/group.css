@@ -28,10 +28,12 @@
     flex-direction: row; /* Garante que o avatar e o texto fiquem à esquerda */
 }
 
-.message-avatar {
-    border-radius: 50%;
+.admin-avatar-container img {
     width: 40px;
     height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
 }
 
 .message-content {
@@ -158,4 +160,23 @@
 #emoji-button:hover {
     background-color: #f0f0f0;
     border-radius: 50%;
+}
+
+/* Melhorias de usabilidade no celular para o campo de texto */
+#chat-message-input {
+    font-size: 16px; /* evita zoom no iOS */
+    line-height: 1.4;
+    min-height: 42px;
+    max-height: 160px;
+    overflow-y: auto;
+    resize: none; /* vamos auto-redimensionar via JS padrão do browser */
+}
+
+@media (max-width: 576px) {
+    .message-content {
+        max-width: 75%;
+    }
+    .chat-message {
+        gap: 8px;
+    }
 }

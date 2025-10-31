@@ -29,11 +29,12 @@ chatSocket.onopen = function(e) {
 
 document.querySelector('#chat-message-input').focus();
 
-document.querySelector('#chat-message-input').onkeyup = function(e) {
-    if (e.keyCode === 13) {  
+document.querySelector('#chat-message-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
         document.querySelector('#chat-message-submit').click();
     }
-};
+});
 
 document.querySelector('#chat-message-submit').onclick = function(e) {
     const messageInputDom = document.querySelector('#chat-message-input');
@@ -50,6 +51,10 @@ document.querySelector('#chat-message-submit').onclick = function(e) {
         }
         appendMessage(message, currentUser, currentUserAvatar, true, null);
         messageInputDom.value = '';
+        // Ajusta altura do textarea após limpar
+        if (messageInputDom.tagName === 'TEXTAREA') {
+            messageInputDom.style.height = 'auto';
+        }
     }
 };
 
@@ -139,4 +144,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const chatLog = document.getElementById('chat-log');
     chatLog.scrollTop = chatLog.scrollHeight;
+
+    // Auto-ajuste de altura do textarea conforme digita
+    if (chatInput && chatInput.tagName === 'TEXTAREA') {
+        const autoResize = () => {
+            chatInput.style.height = 'auto';
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
+        };
+        chatInput.addEventListener('input', autoResize);
+        autoResize();
+    }
 });

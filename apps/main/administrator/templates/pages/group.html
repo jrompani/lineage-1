@@ -523,13 +523,17 @@
 
     <!-- Input for Chat Message -->
     <div class="input-group">
-      <input 
-        id="chat-message-input" 
-        type="text" 
-        class="form-control" 
+      <textarea 
+        id="chat-message-input"
+        class="form-control"
         placeholder="{% trans 'Digite sua mensagem aqui...' %}"
         aria-label="{% trans 'Mensagem' %}"
-      >
+        rows="1"
+        inputmode="text"
+        autocomplete="on"
+        autocapitalize="sentences"
+        spellcheck="true"
+      ></textarea>
       <button 
         id="emoji-button" 
         type="button" 
