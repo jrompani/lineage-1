@@ -32,9 +32,19 @@ class PedidoPagamentoAdmin(BaseModelAdmin):
         total = 0
         for pedido in queryset:
             if pedido.status != 'CONFIRMADO':
+                # Confirma o pedido e aplica os créditos/bônus
                 pedido.confirmar_pagamento()
+                # Também marca o Pagamento associado como 'paid' para evitar reprocessamento via webhook
+                from .models import Pagamento
+                pagamento = Pagamento.objects.filter(pedido_pagamento=pedido).first()
+                if pagamento and pagamento.status != 'paid':
+                    pagamento.status = 'paid'
+                    pagamento.save()
                 total += 1
         self.message_user(request, f"{total} pagamento(s) confirmado(s) com sucesso.")
+
+    class Media:
+        js = ('admin/js/pedido_pagamento_admin.js',)
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('usuario')

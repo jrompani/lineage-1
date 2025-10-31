@@ -103,31 +103,39 @@ def pagamento_sucesso(request):
 
         pagamento = Pagamento.objects.get(id=pagamento_id)
 
-        # garantia do pagamento
-        if status_pagamento == "approved" and pagamento.status != "paid" and pagamento.status == "approved":
-            with transaction.atomic():
-                wallet, created = Wallet.objects.get_or_create(usuario=pagamento.usuario)
-                aplicar_transacao(
-                    wallet=wallet,
-                    tipo="ENTRADA",
-                    valor=pagamento.valor,
-                    descricao="Crédito via MercadoPago (fallback)",
-                    origem="MercadoPago",
-                    destino=pagamento.usuario.username
-                )
-                pagamento.status = "paid"
-                pagamento.save()
+        # Idempotência e consistência com o webhook
+        if status_pagamento == "approved":
+            pedido = pagamento.pedido_pagamento
+            pedido_ja_processado = False
+            if pedido:
+                pedido_ja_processado = pedido.status in ("CONFIRMADO", "CONCLUÍDO")
 
-                pedido = pagamento.pedido_pagamento
-                pedido.status = 'CONCLUÍDO'
-                pedido.save()
+            if pagamento.status == "pending" and not pedido_ja_processado:
+                with transaction.atomic():
+                    # Usa o mesmo caminho de crédito do webhook
+                    from apps.lineage.wallet.utils import aplicar_compra_com_bonus
+                    from decimal import Decimal
 
-                # REGISTRO DO FALBACK NO WEBHOOKLOG
-                WebhookLog.objects.create(
-                    tipo="payment_fallback",
-                    data_id=str(payment_id),
-                    payload=pagamento_info
-                )
+                    wallet, created = Wallet.objects.get_or_create(usuario=pagamento.usuario)
+                    valor_total, valor_bonus, descricao_bonus = aplicar_compra_com_bonus(
+                        wallet, Decimal(str(pagamento.valor)), "MercadoPago"
+                    )
+
+                    pagamento.status = "paid"
+                    pagamento.save()
+
+                    if pedido:
+                        pedido.bonus_aplicado = valor_bonus
+                        pedido.total_creditado = valor_total
+                        pedido.status = 'CONCLUÍDO'
+                        pedido.save()
+
+                    # Registro do fallback para auditoria
+                    WebhookLog.objects.create(
+                        tipo="payment_fallback",
+                        data_id=str(payment_id),
+                        payload=pagamento_info
+                    )
 
         return render(request, 'mp/pagamento_sucesso.html')
 
@@ -142,6 +150,10 @@ def pagamento_sucesso(request):
 
 def pagamento_erro(request):
     return render(request, 'mp/pagamento_erro.html')
+
+
+def pagamento_pendente(request):
+    return render(request, 'mp/pagamento_pendente.html')
 
 
 @csrf_exempt
@@ -197,7 +209,13 @@ def notificacao_mercado_pago(request):
                 if pagamento_id:
                     try:
                         pagamento = Pagamento.objects.get(id=pagamento_id)
-                        if status == "approved" and pagamento.status == "pending":
+                        # Idempotência: só processa se ainda estiver pendente e o pedido não tiver sido confirmado/concluído manualmente
+                        pedido = pagamento.pedido_pagamento
+                        pedido_ja_processado = False
+                        if pedido:
+                            pedido_ja_processado = pedido.status in ("CONFIRMADO", "CONCLUÍDO")
+
+                        if status == "approved" and pagamento.status == "pending" and not pedido_ja_processado:
                             with transaction.atomic():
                                 # Usa o novo sistema de bônus
                                 from apps.lineage.wallet.utils import aplicar_compra_com_bonus
@@ -212,10 +230,12 @@ def notificacao_mercado_pago(request):
                                 pagamento.save()
 
                                 pedido = pagamento.pedido_pagamento
-                                pedido.bonus_aplicado = valor_bonus
-                                pedido.total_creditado = valor_total
-                                pedido.status = 'CONCLUÍDO'
-                                pedido.save()
+                                if pedido:
+                                    pedido.bonus_aplicado = valor_bonus
+                                    pedido.total_creditado = valor_total
+                                    # Mantém consistência com fluxo manual: marca como CONCLUÍDO
+                                    pedido.status = 'CONCLUÍDO'
+                                    pedido.save()
 
                                 try:
                                     # Notificação para staff
@@ -228,6 +248,7 @@ def notificacao_mercado_pago(request):
                                 except Exception as e:
                                     logger.error(f"Erro ao criar notificação: {str(e)}")
 
+                        # Já estava processado: responde OK sem duplicar
                         return HttpResponse("OK", status=200)
 
                     except Pagamento.DoesNotExist:

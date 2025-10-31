@@ -93,12 +93,12 @@
                 </label>
                 <select class="form-select purchase-select" id="metodo" name="metodo" required>
                   <option value="">{% trans "Selecione um método de pagamento" %}</option>
-                  <option value="MercadoPago">
-                    <i class="fab fa-mercado-pago"></i>{% trans "Mercado Pago" %}
-                  </option>
-                  <option value="Stripe">
-                    <i class="fab fa-stripe"></i>{% trans "Stripe" %}
-                  </option>
+                  {% if mercadopago_ativo %}
+                  <option value="MercadoPago">{% trans "Mercado Pago" %}</option>
+                  {% endif %}
+                  {% if stripe_ativo %}
+                  <option value="Stripe">{% trans "Stripe" %}</option>
+                  {% endif %}
                 </select>
                 <div class="form-text">
                   {% trans "Escolha a forma de pagamento de sua preferência" %}
@@ -130,7 +130,12 @@
               </div>
 
               <div class="purchase-actions">
-                <button type="submit" class="purchase-btn">
+                {% if not mercadopago_ativo and not stripe_ativo %}
+                <div class="alert alert-warning" role="alert" style="margin-bottom:12px">
+                  {% trans "No momento não há métodos de pagamento ativos. Tente novamente mais tarde." %}
+                </div>
+                {% endif %}
+                <button type="submit" class="purchase-btn" {% if not mercadopago_ativo and not stripe_ativo %}disabled aria-disabled="true"{% endif %}>
                   <i class="fas fa-check me-2"></i>{% trans "Gerar Pedido" %}
                 </button>
               </div>

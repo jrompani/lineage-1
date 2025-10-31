@@ -13,11 +13,13 @@ urlpatterns = [
     path('order/<int:pedido_id>/', payments_views.detalhes_pedido, name='detalhes_pedido'),
     path('order/<int:pedido_id>/confirm/', payments_views.confirmar_pagamento, name='confirmar_pagamento'),
     path('pending/', payments_views.pedidos_pendentes, name='pedidos_pendentes'),
+    path('status-pagamento/', payments_views.status_pagamento_ajax, name='status_pagamento_ajax'),
     path('cancel-order/<int:pedido_id>/', payments_views.cancelar_pedido, name='cancelar_pedido'),
 
     # Mercado Pago
     path('mercadopago/sucesso/', mercadopago_views.pagamento_sucesso, name='pagamento_sucesso'),
     path('mercadopago/erro/', mercadopago_views.pagamento_erro, name='pagamento_erro'),
+    path('mercadopago/pendente/', mercadopago_views.pagamento_pendente, name='pagamento_pendente'),
     path('mercadopago/notificacao/', mercadopago_views.notificacao_mercado_pago, name='notificacao_mercado_pago'),
 
     # Stripe

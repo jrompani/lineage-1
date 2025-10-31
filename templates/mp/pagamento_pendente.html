@@ -1,0 +1,53 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<div class="container" style="max-width:680px;margin:40px auto;text-align:center">
+	<h2>Pagamento PIX em processamento</h2>
+	<p>Recebemos seu pedido. Assim que o PIX for confirmado pelo banco, seu saldo será creditado automaticamente.</p>
+	<p>Você pode manter esta página aberta por alguns instantes e depois atualizar. Também enviaremos a confirmação dentro do app.</p>
+	<a class="btn btn-primary" href="/">Voltar para a página inicial</a>
+	<script>
+	(function() {
+		function getParam(name) {
+			const url = new URL(window.location.href);
+			return url.searchParams.get(name);
+		}
+
+		var pagamentoId = getParam('pagamento_id');
+		var pedidoId = getParam('pedido_id');
+		if (!pagamentoId) return;
+
+		var retries = 0;
+		var maxRetries = 120; // ~6 minutos total
+		function checkStatus() {
+			fetch(`/payment/status-pagamento/?pagamento_id=${encodeURIComponent(pagamentoId)}`, {
+				credentials: 'same-origin'
+			}).then(function(r) { return r.json(); }).then(function(data) {
+				if (data && data.success && data.concluido) {
+					if (pedidoId) {
+						window.location.href = `/payment/order/${encodeURIComponent(pedidoId)}/`;
+					} else {
+						window.location.href = '/';
+					}
+					return;
+				}
+				retries += 1;
+				if (retries < maxRetries) {
+					// Mais rápido no começo: 1.5s nos primeiros ~60s (40 tentativas), depois 3s
+					var delay = (retries <= 40) ? 1500 : 3000;
+					setTimeout(checkStatus, delay);
+				}
+			}).catch(function() {
+				// silencia e tenta novamente
+				retries += 1;
+				if (retries < maxRetries) {
+					var delay = (retries <= 40) ? 2000 : 4000;
+					setTimeout(checkStatus, delay);
+				}
+			});
+		}
+
+		setTimeout(checkStatus, 1200);
+	})();
+	</script>
+</div>
+{% endblock %}

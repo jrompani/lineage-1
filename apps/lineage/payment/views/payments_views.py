@@ -12,6 +12,7 @@ from django.db import transaction
 from apps.main.home.models import PerfilGamer
 from apps.lineage.wallet.utils import calcular_bonus_compra
 from decimal import Decimal
+from django.urls import reverse
 
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -112,7 +113,9 @@ def criar_ou_reaproveitar_pedido(request):
     bonus_configurados = CoinPurchaseBonus.objects.filter(ativo=True).order_by('ordem', 'valor_minimo')
     
     return render(request, "payment/purchase.html", {
-        'bonus_configurados': bonus_configurados
+        'bonus_configurados': bonus_configurados,
+        'mercadopago_ativo': getattr(settings, 'MERCADO_PAGO_ACTIVATE_PAYMENTS', False),
+        'stripe_ativo': getattr(settings, 'STRIPE_ACTIVATE_PAYMENTS', False),
     })
 
 
@@ -151,6 +154,9 @@ def confirmar_pagamento(request, pedido_id):
 
             if pedido.metodo == "MercadoPago":
                 sdk = mercadopago.SDK(settings.MERCADO_PAGO_ACCESS_TOKEN)
+                pending_url = request.build_absolute_uri(
+                    reverse('payment:pagamento_pendente')
+                ) + f"?pagamento_id={pagamento.id}&pedido_id={pedido.id}"
                 preference_data = {
                     "items": [{
                         "title": "Moedas para o jogo",
@@ -158,9 +164,11 @@ def confirmar_pagamento(request, pedido_id):
                         "currency_id": "BRL",
                         "unit_price": float(pedido.valor_pago),
                     }],
+                    "external_reference": str(pagamento.id),
                     "back_urls": {
                         "success": settings.MERCADO_PAGO_SUCCESS_URL,
                         "failure": settings.MERCADO_PAGO_FAILURE_URL,
+                        "pending": pending_url,
                     },
                     "auto_return": "approved",
                     "metadata": {"pagamento_id": pagamento.id}
@@ -208,6 +216,74 @@ def confirmar_pagamento(request, pedido_id):
 
     except PedidoPagamento.DoesNotExist:
         return HttpResponse("Pedido não encontrado.", status=404)
+
+
+@conditional_otp_required
+def status_pagamento_ajax(request):
+    pagamento_id = request.GET.get('pagamento_id')
+    if not pagamento_id:
+        return JsonResponse({'success': False, 'error': 'pagamento_id ausente'}, status=400)
+
+    try:
+        pagamento = Pagamento.objects.select_related('pedido_pagamento', 'usuario').get(id=pagamento_id)
+        if pagamento.usuario_id != request.user.id:
+            return JsonResponse({'success': False, 'error': 'Não autorizado'}, status=403)
+
+        pedido = pagamento.pedido_pagamento
+        pagamento_status = pagamento.status
+        pedido_status = pedido.status if pedido else None
+
+        concluido = (pagamento_status == 'paid') or (pedido_status in ('CONFIRMADO', 'CONCLUÍDO'))
+
+        # Se ainda não concluiu, tenta um pull no Mercado Pago via merchant_order.search por external_reference
+        if not concluido and pedido and pedido.metodo == 'MercadoPago':
+            try:
+                import mercadopago
+                sdk = mercadopago.SDK(settings.MERCADO_PAGO_ACCESS_TOKEN)
+                search = sdk.merchant_order().search({
+                    'external_reference': str(pagamento.id)
+                })
+                if search.get('status') == 200:
+                    results = (search.get('response') or {}).get('elements', [])
+                    # Procura qualquer ordem com pagamento aprovado
+                    for order in results:
+                        pagamentos_mp = order.get('payments', [])
+                        aprovado = any(p.get('status') == 'approved' for p in pagamentos_mp)
+                        if aprovado:
+                            # Idempotente: replica a mesma lógica do webhook
+                            if pagamento.status == 'pending':
+                                from django.db import transaction
+                                from apps.lineage.wallet.utils import aplicar_compra_com_bonus
+                                from decimal import Decimal
+                                with transaction.atomic():
+                                    wallet, _ = Wallet.objects.get_or_create(usuario=pagamento.usuario)
+                                    valor_total, valor_bonus, descricao_bonus = aplicar_compra_com_bonus(
+                                        wallet, Decimal(str(pagamento.valor)), 'MercadoPago'
+                                    )
+                                    pagamento.status = 'paid'
+                                    pagamento.save()
+                                    if pedido:
+                                        pedido.bonus_aplicado = valor_bonus
+                                        pedido.total_creditado = valor_total
+                                        pedido.status = 'CONCLUÍDO'
+                                        pedido.save()
+                            # Atualiza flags locais após processamento
+                            pagamento_status = 'paid'
+                            pedido_status = 'CONCLUÍDO'
+                            concluido = True
+                            break
+            except Exception:
+                # Silencia no polling para não quebrar UX
+                pass
+
+        return JsonResponse({
+            'success': True,
+            'pagamento_status': pagamento_status,
+            'pedido_status': pedido_status,
+            'concluido': concluido
+        })
+    except Pagamento.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Pagamento não encontrado'}, status=404)
 
 
 @conditional_otp_required
