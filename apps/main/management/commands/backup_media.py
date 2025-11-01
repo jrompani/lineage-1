@@ -10,7 +10,8 @@ Uso:
 import os
 import shutil
 import zipfile
-from datetime import datetime
+import datetime
+from django.utils import timezone
 from django.core.management.base import BaseCommand, CommandError
 from django.core.files.storage import default_storage
 from django.conf import settings
@@ -61,7 +62,7 @@ class Command(BaseCommand):
 
     def create_backup(self, specific_path, backup_dir):
         """Cria backup dos arquivos de mídia"""
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
         backup_filename = f'media_backup_{timestamp}.zip'
         backup_path = os.path.join(backup_dir, backup_filename)
 

@@ -1,4 +1,4 @@
-import datetime
+from django.utils import timezone
 
 
 def base36encode(number):
@@ -15,6 +15,6 @@ def base36encode(number):
 
 
 def create_code():
-    actual_datetime = datetime.datetime.now()
+    actual_datetime = timezone.now()
     actual_datetime = actual_datetime.strftime("1%d%m%y%H%M%S%f")
     return str(base36encode(int(actual_datetime)))

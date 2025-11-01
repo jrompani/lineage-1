@@ -1935,7 +1935,7 @@ def export_logs_excel(request):
     # Cabeçalho do relatório
     title_font = Font(name='Calibri', size=16, bold=True, color='2E75B6')
     stats_ws.cell(row=1, column=1, value="RELATÓRIO DE LOGS DE MODERAÇÃO").font = title_font
-    stats_ws.cell(row=2, column=1, value=f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M:%S')}")
+    stats_ws.cell(row=2, column=1, value=f"Gerado em: {timezone.now().strftime('%d/%m/%Y às %H:%M:%S')}")
     stats_ws.cell(row=3, column=1, value=f"Total de registros: {logs.count():,}")
     
     # Filtros aplicados
@@ -2018,7 +2018,7 @@ def export_logs_excel(request):
         elif date_to:
             filename_parts.append(f'ate_{date_to}')
     
-    filename_parts.append(datetime.now().strftime('%Y%m%d_%H%M%S'))
+    filename_parts.append(timezone.now().strftime('%Y%m%d_%H%M%S'))
     filename = '_'.join(filename_parts) + '.xlsx'
     
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
@@ -2069,7 +2069,7 @@ def export_logs_csv(request):
         elif date_to:
             filename_parts.append(f'ate_{date_to}')
     
-    filename_parts.append(datetime.now().strftime('%Y%m%d_%H%M%S'))
+    filename_parts.append(timezone.now().strftime('%Y%m%d_%H%M%S'))
     filename = '_'.join(filename_parts) + '.csv'
     
     response['Content-Disposition'] = f'attachment; filename="{filename}"'

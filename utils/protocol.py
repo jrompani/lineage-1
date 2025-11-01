@@ -1,4 +1,4 @@
-import datetime
+from django.utils import timezone
 import random
 
 
@@ -16,7 +16,7 @@ def base36encode(number):
 
 
 def create_protocol():
-    actual_datetime = datetime.datetime.now()
+    actual_datetime = timezone.now()
     # Obtém a data e hora no formato: "1ddMMyyHHMMSSsss"
     datetime_str = actual_datetime.strftime("1%d%m%y%H%M%S") + str(actual_datetime.microsecond)[:3]
     # Adiciona um número aleatório para garantir a unicidade

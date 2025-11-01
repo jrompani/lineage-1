@@ -202,10 +202,11 @@ def benfeitor_comunitario(user, request=None):
 def bonus_diario_7dias(user, request=None):
     """Recebeu bônus diário por 7 dias consecutivos"""
     from apps.lineage.wallet.models import TransacaoBonus
-    from datetime import datetime, timedelta
+    from django.utils import timezone
+    from datetime import timedelta
     
     # Verifica se recebeu bônus nos últimos 7 dias
-    data_limite = datetime.now() - timedelta(days=7)
+    data_limite = timezone.now() - timedelta(days=7)
     bonus_recentes = TransacaoBonus.objects.filter(
         wallet__usuario=user,
         tipo='ENTRADA',
@@ -218,9 +219,10 @@ def bonus_diario_7dias(user, request=None):
 def bonus_diario_30dias(user, request=None):
     """Recebeu bônus diário por 30 dias consecutivos"""
     from apps.lineage.wallet.models import TransacaoBonus
-    from datetime import datetime, timedelta
+    from django.utils import timezone
+    from datetime import timedelta
     
-    data_limite = datetime.now() - timedelta(days=30)
+    data_limite = timezone.now() - timedelta(days=30)
     bonus_recentes = TransacaoBonus.objects.filter(
         wallet__usuario=user,
         tipo='ENTRADA',

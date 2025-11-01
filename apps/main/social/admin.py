@@ -589,7 +589,6 @@ class ModerationLogAdmin(BaseModelAdmin):
             return redirect(request.META.get('HTTP_REFERER', '/admin/'))
         
         from django.http import HttpResponse
-        from datetime import datetime
         
         # Criar workbook
         wb = openpyxl.Workbook()
@@ -696,7 +695,7 @@ class ModerationLogAdmin(BaseModelAdmin):
         
         # Cabeçalho da aba de estatísticas
         stats_ws.cell(row=1, column=1, value="RELATÓRIO DE LOGS DE MODERAÇÃO").font = Font(size=16, bold=True)
-        stats_ws.cell(row=2, column=1, value=f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+        stats_ws.cell(row=2, column=1, value=f"Gerado em: {timezone.now().strftime('%d/%m/%Y %H:%M:%S')}")
         stats_ws.cell(row=3, column=1, value=f"Total de registros: {queryset.count()}")
         
         # Estatísticas por tipo de ação
@@ -735,7 +734,7 @@ class ModerationLogAdmin(BaseModelAdmin):
         response = HttpResponse(
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
-        filename = f"logs_moderacao_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        filename = f"logs_moderacao_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         
         # Salvar workbook na resposta

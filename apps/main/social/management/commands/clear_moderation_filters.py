@@ -154,9 +154,9 @@ class Command(BaseCommand):
             # Salvar backup em arquivo (opcional)
             if backup_data:
                 import json
-                from datetime import datetime
+                from django.utils import timezone
                 
-                backup_filename = f'filters_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+                backup_filename = f'filters_backup_{timezone.now().strftime("%Y%m%d_%H%M%S")}.json'
                 
                 try:
                     with open(backup_filename, 'w', encoding='utf-8') as f:

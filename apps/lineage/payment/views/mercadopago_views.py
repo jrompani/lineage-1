@@ -111,7 +111,7 @@ def pagamento_sucesso(request):
             if pedido:
                 pedido_ja_processado = pedido.status in ("CONFIRMADO", "CONCLUÍDO")
 
-            if pagamento.status == "pending" and not pedido_ja_processado:
+            if pagamento.status in ("pending", "approved") and not pedido_ja_processado:
                 with transaction.atomic():
                     # Usa o mesmo caminho de crédito do webhook
                     from apps.lineage.wallet.utils import aplicar_compra_com_bonus
@@ -273,9 +273,41 @@ def notificacao_mercado_pago(request):
                     if external_reference:
                         try:
                             pagamento = Pagamento.objects.get(id=external_reference)
-                            if pagamento.status == "pending":
-                                pagamento.status = "approved"
-                                pagamento.save()
+                            # Idempotência e consistência: se ainda não processado/concluído, aplica crédito aqui
+                            pedido = pagamento.pedido_pagamento
+                            pedido_ja_processado = False
+                            if pedido:
+                                pedido_ja_processado = pedido.status in ("CONFIRMADO", "CONCLUÍDO")
+
+                            if pagamento.status in ("pending", "approved") and not pedido_ja_processado:
+                                from apps.lineage.wallet.utils import aplicar_compra_com_bonus
+                                from decimal import Decimal
+                                with transaction.atomic():
+                                    wallet, _ = Wallet.objects.get_or_create(usuario=pagamento.usuario)
+                                    valor_total, valor_bonus, descricao_bonus = aplicar_compra_com_bonus(
+                                        wallet, Decimal(str(pagamento.valor)), "MercadoPago"
+                                    )
+                                    pagamento.status = "paid"
+                                    pagamento.processado_em = timezone.now()
+                                    pagamento.save()
+
+                                    if pedido:
+                                        pedido.bonus_aplicado = valor_bonus
+                                        pedido.total_creditado = valor_total
+                                        pedido.status = 'CONCLUÍDO'
+                                        pedido.save()
+
+                                    try:
+                                        send_notification(
+                                            user=None,
+                                            notification_type='staff',
+                                            message=f"Pagamento aprovado para {pagamento.usuario.username} no valor de R$ {pagamento.valor:.2f}.",
+                                            created_by=None
+                                        )
+                                    except Exception as e:
+                                        logger.error(f"Erro ao criar notificação: {str(e)}")
+
+                            # Mesmo se já processado, responder OK para o webhook
                             return HttpResponse("OK", status=200)
                         except Pagamento.DoesNotExist:
                             return HttpResponse("Pagamento não encontrado pela referência", status=404)

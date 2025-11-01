@@ -12,7 +12,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY, TA_RIGHT
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.units import cm
-from datetime import datetime
+from django.utils import timezone
 import io
 
 def create_header_footer(canvas, doc):
@@ -32,7 +32,7 @@ def create_header_footer(canvas, doc):
     # Rodapé
     canvas.setFillColor(colors.grey)
     canvas.setFont("Helvetica", 8)
-    canvas.drawString(72, 30, f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}")
+    canvas.drawString(72, 30, f"Gerado em: {timezone.now().strftime('%d/%m/%Y às %H:%M')}")
     canvas.drawRightString(A4[0] - 72, 30, f"Página {doc.page}")
     
     # Linha decorativa no rodapé
