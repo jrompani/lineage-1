@@ -75,7 +75,8 @@ def expirar_pedidos_antigos():
     PedidoPagamento.objects.filter(status='PENDENTE', data_criacao__lt=limite).update(status='EXPIRADO')
 
 
-def processar_pedidos_aprovados():
+def processar_pedidos_aprovados() -> int:
+    processed = 0
     pagamentos = Pagamento.objects.filter(status='approved', pedido_pagamento__status='PENDENTE')
     for pagamento in pagamentos:
         try:
@@ -95,6 +96,8 @@ def processar_pedidos_aprovados():
                 pedido = pagamento.pedido_pagamento
                 pedido.status = 'CONCLUÍDO'
                 pedido.save()
+                processed += 1
         except Exception as e:
             # Logar ou tratar o erro de alguma forma
             print(f"Erro ao creditar pagamento {pagamento.id}: {e}")
+    return processed

@@ -73,7 +73,7 @@ class PagamentoAdmin(BaseModelAdmin):
     ordering = ('-data_criacao',)
     readonly_fields = ('data_criacao', 'transaction_code')
 
-    actions = ['reconciliar_mercadopago', 'exportar_csv']
+    actions = ['reconciliar_mercadopago', 'processar_aprovados', 'exportar_csv']
 
     fieldsets = (
         (None, {
@@ -131,6 +131,40 @@ class PagamentoAdmin(BaseModelAdmin):
                 continue
 
         self.message_user(request, f"{reconciliados} pagamento(s) reconciliado(s) com sucesso.")
+
+    @admin.action(description='Processar pagamentos aprovados (creditar e concluir)')
+    def processar_aprovados(self, request, queryset):
+        from django.utils import timezone
+        from decimal import Decimal
+        from django.db import transaction
+        from apps.lineage.wallet.models import Wallet
+        from apps.lineage.wallet.utils import aplicar_compra_com_bonus
+
+        processados = 0
+        for pagamento in queryset.select_related('pedido_pagamento', 'usuario'):
+            if pagamento.status != 'approved':
+                continue
+            pedido = pagamento.pedido_pagamento
+            if not pedido or pedido.status != 'PENDENTE':
+                continue
+            try:
+                with transaction.atomic():
+                    wallet, _ = Wallet.objects.get_or_create(usuario=pagamento.usuario)
+                    valor_total, valor_bonus, _ = aplicar_compra_com_bonus(
+                        wallet, Decimal(str(pagamento.valor)), pagamento.pedido_pagamento.metodo if pagamento.pedido_pagamento else 'MercadoPago'
+                    )
+                    pagamento.status = 'paid'
+                    pagamento.processado_em = timezone.now()
+                    pagamento.save()
+                    pedido.bonus_aplicado = valor_bonus
+                    pedido.total_creditado = valor_total
+                    pedido.status = 'CONCLUÍDO'
+                    pedido.save()
+                    processados += 1
+            except Exception:
+                continue
+
+        self.message_user(request, f"{processados} pagamento(s) aprovado(s) processado(s) com sucesso.")
 
     @admin.action(description='Exportar CSV dos pagamentos selecionados')
     def exportar_csv(self, request, queryset):
