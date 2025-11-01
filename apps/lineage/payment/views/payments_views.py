@@ -337,7 +337,18 @@ def detalhes_pedido(request, pedido_id):
 
 @conditional_otp_required
 def pedidos_pendentes(request):
-    pedidos = PedidoPagamento.objects.filter(usuario=request.user, status='PENDENTE').order_by('-data_criacao')
+    pedidos = list(PedidoPagamento.objects.filter(usuario=request.user, status='PENDENTE').order_by('-data_criacao'))
+
+    # Anota cada pedido com flag de cancelamento com base no status local do pagamento
+    pagamentos = {
+        p.pedido_pagamento_id: p
+        for p in Pagamento.objects.filter(pedido_pagamento__in=pedidos)
+    }
+
+    for pedido in pedidos:
+        pg = pagamentos.get(pedido.id)
+        pedido.cancelavel = not (pg and pg.status in ('approved', 'paid'))
+
     return render(request, "payment/pedidos_pendentes.html", {"pedidos": pedidos})
 
 
@@ -351,6 +362,75 @@ def cancelar_pedido(request, pedido_id):
     if pedido.status != 'PENDENTE':
         return HttpResponse("Este pedido não pode ser cancelado.", status=400)
 
+    # Verifica se existe pagamento vinculado e se já há indícios de aprovação
+    pagamento = Pagamento.objects.filter(pedido_pagamento=pedido).first()
+
+    # Se já marcado como aprovado/pago localmente, não permite cancelar
+    if pagamento and pagamento.status in ('approved', 'paid'):
+        return HttpResponse("Pedido já pago/ aprovado. Cancelamento não permitido.", status=400)
+
+    # Poll rápido no provedor antes de cancelar, para evitar cancelamento indevido
+    try:
+        if pagamento and pedido.metodo == 'MercadoPago':
+            import mercadopago
+            sdk = mercadopago.SDK(settings.MERCADO_PAGO_ACCESS_TOKEN)
+            search = sdk.merchant_order().search({'external_reference': str(pagamento.id)})
+            if search.get('status') == 200:
+                results = (search.get('response') or {}).get('elements', [])
+                for order in results:
+                    pagamentos_mp = order.get('payments', [])
+                    aprovado = any(p.get('status') == 'approved' for p in pagamentos_mp)
+                    if aprovado:
+                        # Se aprovado no provedor, processa crédito idempotente e bloqueia cancelamento
+                        from apps.lineage.wallet.models import Wallet
+                        from apps.lineage.wallet.utils import aplicar_compra_com_bonus
+                        from decimal import Decimal
+                        with transaction.atomic():
+                            wallet, _ = Wallet.objects.get_or_create(usuario=pagamento.usuario)
+                            valor_total, valor_bonus, _ = aplicar_compra_com_bonus(
+                                wallet, Decimal(str(pagamento.valor)), 'MercadoPago'
+                            )
+                            from django.utils import timezone as dj_timezone
+                            pagamento.status = 'paid'
+                            pagamento.processado_em = dj_timezone.now()
+                            pagamento.save()
+                            pedido.bonus_aplicado = valor_bonus
+                            pedido.total_creditado = valor_total
+                            pedido.status = 'CONCLUÍDO'
+                            pedido.save()
+                        return HttpResponse("Pagamento aprovado. Pedido concluído. Cancelamento não permitido.", status=400)
+
+        if pagamento and pedido.metodo == 'Stripe' and pagamento.transaction_code:
+            # Consulta a sessão do Stripe para confirmar status
+            try:
+                session = stripe.checkout.Session.retrieve(pagamento.transaction_code)
+                # Stripe: payment_status 'paid' ou status 'complete' indicam sucesso
+                if getattr(session, 'payment_status', None) == 'paid' or getattr(session, 'status', None) == 'complete':
+                    from apps.lineage.wallet.models import Wallet
+                    from apps.lineage.wallet.utils import aplicar_compra_com_bonus
+                    from decimal import Decimal
+                    with transaction.atomic():
+                        wallet, _ = Wallet.objects.get_or_create(usuario=pagamento.usuario)
+                        valor_total, valor_bonus, _ = aplicar_compra_com_bonus(
+                            wallet, Decimal(str(pagamento.valor)), 'Stripe'
+                        )
+                        from django.utils import timezone as dj_timezone
+                        pagamento.status = 'paid'
+                        pagamento.processado_em = dj_timezone.now()
+                        pagamento.save()
+                        pedido.bonus_aplicado = valor_bonus
+                        pedido.total_creditado = valor_total
+                        pedido.status = 'CONCLUÍDO'
+                        pedido.save()
+                    return HttpResponse("Pagamento aprovado. Pedido concluído. Cancelamento não permitido.", status=400)
+            except Exception:
+                # Se não conseguir consultar o Stripe, segue o fluxo padrão
+                pass
+    except Exception:
+        # Em caso de erro no polling, não bloqueia por erro de consulta – segue regra local
+        pass
+
+    # Sem indícios de pagamento: pode cancelar
     pedido.status = 'CANCELADO'
     pedido.save()
 
