@@ -36,6 +36,10 @@ class SpinHistory(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name=_("User"))
     prize = models.ForeignKey(Prize, on_delete=models.CASCADE, verbose_name=_("Prize"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
+    # Auditoria do giro
+    seed = models.BigIntegerField(null=True, blank=True, verbose_name=_("Random Seed"))
+    fail_chance = models.PositiveIntegerField(null=True, blank=True, verbose_name=_("Fail Chance (%)"))
+    weights_snapshot = models.TextField(null=True, blank=True, verbose_name=_("Weights Snapshot (JSON)"))
 
     def __str__(self):
         return f'{self.user.username} won {self.prize.name}'
@@ -43,6 +47,18 @@ class SpinHistory(BaseModel):
     class Meta:
         verbose_name = _("Spin History")
         verbose_name_plural = _("Spin Histories")
+
+
+class GameConfig(BaseModel):
+    """Configurações do módulo de jogos (roleta, etc)."""
+    fail_chance = models.PositiveIntegerField(default=20, verbose_name=_("Fail Chance (%)"))
+
+    class Meta:
+        verbose_name = _("Game Config")
+        verbose_name_plural = _("Game Configs")
+
+    def __str__(self):
+        return f"GameConfig (fail_chance={self.fail_chance}%)"
 
 
 class Bag(BaseModel):

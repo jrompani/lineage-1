@@ -14,6 +14,9 @@ from ..services.box_populate import populate_box_with_items
 from django.db import transaction
 from django.db.models import Count, Q
 from django.utils.translation import gettext_lazy as _
+from django.contrib.auth import get_user_model
+import json
+import time
 
 
 def parse_int(value, default=0):
@@ -24,35 +27,70 @@ def parse_int(value, default=0):
 
 
 @conditional_otp_required
+@transaction.atomic
 def spin_ajax(request):
-    if request.user.fichas <= 0:
+    UserModel = get_user_model()
+
+    # Lock the user row to avoid race conditions during concurrent spins
+    user = UserModel.objects.select_for_update().get(pk=request.user.pk)
+
+    if user.fichas <= 0:
         return JsonResponse({'error': _('Você não tem fichas suficientes.')}, status=400)
 
     prizes = list(Prize.objects.all())
     if not prizes:
         return JsonResponse({'error': _('Nenhum prêmio disponível.')}, status=400)
 
-    # Adicione a opção de falha
-    fail_chance = 20  # Representa 20% de chance de falhar
+    # Configurável via GameConfig
+    from ..models import GameConfig
+    cfg = GameConfig.objects.first()
+    fail_chance = cfg.fail_chance if cfg else 20  # fallback para 20%
     total_weight = sum(p.weight for p in prizes)
     fail_weight = total_weight * (fail_chance / (100 - fail_chance))
 
     choices = prizes + [None]  # `None` representa a falha
     weights = [p.weight for p in prizes] + [fail_weight]
 
+    # Auditoria: seed e snapshot de pesos
+    seed = int(time.time_ns())
+    random.seed(seed)
     chosen = random.choices(choices, weights=weights, k=1)[0]
 
-    # Deduz uma ficha
-    request.user.fichas -= 1
-    request.user.save()
+    # Deduz uma ficha de forma transacional
+    user.fichas -= 1
+    user.save(update_fields=["fichas"])
 
     if chosen is None:
+        # Registrar auditoria mesmo em falha
+        SpinHistory.objects.create(
+            user=user,
+            prize=prizes[0],  # dummy prize para manter FK não nula; alternativa seria permitir null
+            fail_chance=fail_chance,
+            seed=seed,
+            weights_snapshot=json.dumps({
+                'prizes': [
+                    {'id': p.id, 'weight': p.weight} for p in prizes
+                ],
+                'fail_weight': fail_weight
+            })
+        )
         return JsonResponse({'fail': True, 'message': _('Você não ganhou nenhum prêmio.')})
 
-    SpinHistory.objects.create(user=request.user, prize=chosen)
+    SpinHistory.objects.create(
+        user=user,
+        prize=chosen,
+        fail_chance=fail_chance,
+        seed=seed,
+        weights_snapshot=json.dumps({
+            'prizes': [
+                {'id': p.id, 'weight': p.weight} for p in prizes
+            ],
+            'fail_weight': fail_weight
+        })
+    )
 
     # Certifique-se de que o usuário tenha uma bag
-    bag, created = Bag.objects.get_or_create(user=request.user)
+    bag, created = Bag.objects.get_or_create(user=user)
 
     # Verifica se o item já existe na bag (mesma id + enchant)
     bag_item, created = BagItem.objects.get_or_create(
@@ -67,7 +105,7 @@ def spin_ajax(request):
 
     if not created:
         bag_item.quantity += 1
-        bag_item.save()
+        bag_item.save(update_fields=["quantity"])
 
     return JsonResponse({
         'id': chosen.id,

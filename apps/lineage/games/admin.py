@@ -34,15 +34,19 @@ class PrizeAdmin(BaseModelAdmin):
 
 @admin.register(SpinHistory)
 class SpinHistoryAdmin(BaseModelAdmin):
-    list_display = ('user', 'prize', 'created_at', 'get_prize_rarity')
+    list_display = ('user', 'prize', 'created_at', 'fail_chance', 'get_prize_rarity')
     search_fields = ('user__username', 'prize__name')
-    list_filter = ('created_at', 'prize__rarity')
+    list_filter = ('created_at', 'prize__rarity', 'fail_chance')
     readonly_fields = ('created_at',)
     ordering = ('-created_at',)
     
     fieldsets = (
         (_('Usuário e Prêmio'), {
             'fields': ('user', 'prize')
+        }),
+        (_('Auditoria'), {
+            'fields': ('fail_chance', 'seed', 'weights_snapshot'),
+            'classes': ('collapse',)
         }),
         (_('Data'), {
             'fields': ('created_at',),
@@ -63,6 +67,12 @@ class SpinHistoryAdmin(BaseModelAdmin):
             color, obj.prize.get_rarity_display()
         )
     get_prize_rarity.short_description = _('Raridade')
+
+
+@admin.register(GameConfig)
+class GameConfigAdmin(BaseModelAdmin):
+    list_display = ('fail_chance', 'created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at')
 
 
 @admin.register(Bag)
