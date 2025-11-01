@@ -29,6 +29,8 @@ urlpatterns = [
     path("public/terms/", terms_view, name="terms"),
     path("public/user-agreement/", user_agreement_view, name="user_agreement"),
     path("public/privacy-policy/", privacy_policy_view, name="privacy_policy"),
+    # Config Hub
+    path('config/hub/', config_hub_view, name='config_hub'),
     path("public/maintenance/", maintenance_view, name="maintenance"),
     path("public/license-expired/", license_expired_view, name="license_expired"),
 

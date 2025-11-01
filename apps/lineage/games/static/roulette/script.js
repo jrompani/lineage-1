@@ -19,20 +19,26 @@ document.addEventListener("DOMContentLoaded", () => {
     const rouletteList = document.getElementById("rouletteList");
     const body = document.body;
 
-    // Renderiza os prêmios duplicados para permitir várias voltas
+    // Render function com classes por raridade
     const repeat = 10; // número de repetições da lista
-    prizes.forEach(() => {
+    function rarityClass(rarity) {
+        const map = { 'COMUM': 'rarity-common', 'RARA': 'rarity-rare', 'EPICA': 'rarity-epic', 'LENDARIA': 'rarity-legendary', 'LENDARIO': 'rarity-legendary', 'LEGENDARY': 'rarity-legendary', 'EPIC': 'rarity-epic', 'RARE': 'rarity-rare', 'COMMON': 'rarity-common' };
+        return map[rarity?.toString().toUpperCase()] || 'rarity-common';
+    }
+    function renderList() {
+        rouletteList.innerHTML = '';
         for (let i = 0; i < repeat; i++) {
             prizes.forEach(prize => {
-                const li = document.createElement("li");
+                const li = document.createElement('li');
                 li.innerHTML = `
                     <img src="${prize.image_url}" alt="${prize.name}" />
-                    ${prize.name}: +${prize.enchant} - ${prize.rarity}
+                    <span class="${rarityClass(prize.rarity)}">${prize.name} +${prize.enchant}</span>
                 `;
                 rouletteList.appendChild(li);
             });
         }
-    });
+    }
+    renderList();
 
     // Função para adicionar o efeito de partículas na tela (fogos de artifício)
     function showParticles() {
@@ -138,16 +144,14 @@ document.addEventListener("DOMContentLoaded", () => {
             
                 // Caso contrário, segue o fluxo normal de exibição do prêmio
                 const index = prizes.findIndex(p => p.id === data.id);
-                const itemHeight = 100;
-                const spinRounds = 5;
-                const offset = (itemHeight * index) + (itemHeight / 2);
-            
+                const itemHeight = 96; // manter em sincronia com CSS
+
                 rouletteList.style.transition = 'none';
                 rouletteList.style.transform = `translateY(0px)`;
-            
+
                 requestAnimationFrame(() => {
-                    rouletteList.style.transition = 'transform 3s ease-out';
-                    const totalItems = prizes.length * repeat;
+                    // easing mais suave
+                    rouletteList.style.transition = 'transform 3.2s cubic-bezier(0.15, 0.85, 0.2, 1)';
                     const targetIndex = (prizes.length * (repeat - 1)) + index;
                     const totalMove = (itemHeight * targetIndex) + (itemHeight / 2);
                     rouletteList.style.transform = `translateY(-${totalMove}px)`;
@@ -180,17 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     // Reset visual
                     rouletteList.style.transition = 'none';
                     rouletteList.style.transform = `translateY(0px)`;
-                    rouletteList.innerHTML = '';
-                    for (let i = 0; i < repeat; i++) {
-                        prizes.forEach(prize => {
-                            const li = document.createElement("li");
-                            li.innerHTML = `
-                                <img src="${prize.image_url}" alt="${prize.name}" />
-                                ${prize.name} +${prize.enchant}- ${prize.rarity}
-                            `;
-                            rouletteList.appendChild(li);
-                        });
-                    }
+                    renderList();
                 }, 3200);
             })
             .catch(err => {

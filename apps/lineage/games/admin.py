@@ -8,15 +8,15 @@ from .forms import BoxTypeAdminForm
 
 @admin.register(Prize)
 class PrizeAdmin(BaseModelAdmin):
-    list_display = ('name', 'image_preview', 'weight', 'item_id', 'enchant', 'rarity', 'created_at', 'updated_at')
-    search_fields = ('name', 'item_id')
+    list_display = ('display_name', 'image_preview', 'weight', 'display_item_id', 'display_enchant', 'rarity', 'created_at', 'updated_at')
+    search_fields = ('name', 'item__name', 'legacy_item_code')
     list_filter = ('created_at', 'rarity', 'enchant')
     readonly_fields = ('created_at', 'updated_at')
     ordering = ('name',)
     
     fieldsets = (
         (_('Informações do Prêmio'), {
-            'fields': ('name', 'item_id', 'image', 'weight', 'enchant', 'rarity')
+            'fields': ('item', 'name', 'image', 'weight', 'enchant', 'rarity', 'legacy_item_code')
         }),
         (_('Datas'), {
             'fields': ('created_at', 'updated_at'),
@@ -31,18 +31,34 @@ class PrizeAdmin(BaseModelAdmin):
         )
     image_preview.short_description = _('Imagem')
 
+    def display_name(self, obj):
+        return obj.item.name if obj.item else obj.name
+    display_name.short_description = _('Nome')
+
+    def display_item_id(self, obj):
+        return obj.item.item_id if obj.item else obj.legacy_item_code
+    display_item_id.short_description = _('Item ID')
+
+    def display_enchant(self, obj):
+        return obj.item.enchant if obj.item else obj.enchant
+    display_enchant.short_description = _('Enchant')
+
 
 @admin.register(SpinHistory)
 class SpinHistoryAdmin(BaseModelAdmin):
-    list_display = ('user', 'prize', 'created_at', 'get_prize_rarity')
+    list_display = ('user', 'prize', 'created_at', 'fail_chance', 'get_prize_rarity')
     search_fields = ('user__username', 'prize__name')
-    list_filter = ('created_at', 'prize__rarity')
+    list_filter = ('created_at', 'prize__rarity', 'fail_chance')
     readonly_fields = ('created_at',)
     ordering = ('-created_at',)
     
     fieldsets = (
         (_('Usuário e Prêmio'), {
             'fields': ('user', 'prize')
+        }),
+        (_('Auditoria'), {
+            'fields': ('fail_chance', 'seed', 'weights_snapshot'),
+            'classes': ('collapse',)
         }),
         (_('Data'), {
             'fields': ('created_at',),
@@ -63,6 +79,12 @@ class SpinHistoryAdmin(BaseModelAdmin):
             color, obj.prize.get_rarity_display()
         )
     get_prize_rarity.short_description = _('Raridade')
+
+
+@admin.register(GameConfig)
+class GameConfigAdmin(BaseModelAdmin):
+    list_display = ('fail_chance', 'created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at')
 
 
 @admin.register(Bag)
@@ -116,7 +138,7 @@ class ItemAdmin(BaseModelAdmin):
     
     fieldsets = (
         (_('Informações do Item'), {
-            'fields': ('name', 'item_id', 'enchant', 'rarity', 'description')
+            'fields': ('name', 'item_id', 'enchant', 'rarity', 'description', 'image')
         }),
         (_('Configurações'), {
             'fields': ('can_be_populated',),
@@ -342,16 +364,60 @@ class MonsterAdmin(BaseModelAdmin):
 
 @admin.register(RewardItem)
 class RewardItemAdmin(BaseModelAdmin):
-    list_display = ('name', 'item_id', 'enchant', 'description', 'amount', 'created_at')
-    search_fields = ('name', 'item_id', 'description')
-    list_filter = ('enchant', 'created_at')
-    ordering = ('name',)
+    list_display = ('item', 'amount', 'created_at')
+    search_fields = ('item__name', 'item__item_id')
+    list_filter = ('created_at',)
+    ordering = ('-created_at',)
 
     fieldsets = (
         (_('Informações do Item'), {
-            'fields': ('name', 'item_id', 'enchant', 'description', 'amount')
+            'fields': ('item', 'amount')
         }),
     )
+
+
+# ==============================
+# Daily Bonus Admin
+# ==============================
+
+@admin.register(DailyBonusSeason)
+class DailyBonusSeasonAdmin(BaseModelAdmin):
+    list_display = ('name', 'is_active', 'start_date', 'end_date', 'reset_hour_utc', 'created_at')
+    list_filter = ('is_active', 'start_date', 'end_date')
+    search_fields = ('name',)
+    ordering = ('-is_active', '-start_date')
+    fieldsets = (
+        (_('Informações'), {'fields': ('name', 'is_active', 'start_date', 'end_date', 'reset_hour_utc')}),
+        (_('Datas'), {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)}),
+    )
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(DailyBonusPoolEntry)
+class DailyBonusPoolEntryAdmin(BaseModelAdmin):
+    list_display = ('season', 'item', 'weight', 'created_at')
+    list_filter = ('season', 'item__rarity')
+    search_fields = ('item__name', 'season__name')
+    ordering = ('season', '-weight')
+
+
+@admin.register(DailyBonusDay)
+class DailyBonusDayAdmin(BaseModelAdmin):
+    list_display = ('season', 'day_of_month', 'mode', 'fixed_item')
+    list_filter = ('season', 'mode')
+    search_fields = ('season__name', 'fixed_item__name')
+    ordering = ('season', 'day_of_month')
+    fieldsets = (
+        (_('Dia do Mês'), {'fields': ('season', 'day_of_month', 'mode', 'fixed_item')}),
+    )
+
+
+@admin.register(DailyBonusClaim)
+class DailyBonusClaimAdmin(BaseModelAdmin):
+    list_display = ('user', 'season', 'day_of_month', 'claimed_at')
+    list_filter = ('season', 'claimed_at')
+    search_fields = ('user__username', 'season__name')
+    ordering = ('-claimed_at',)
 
 
 @admin.register(BattlePassSeason)
@@ -472,6 +538,27 @@ class UserBattlePassProgressAdmin(BaseModelAdmin):
                 break
         return level
     get_level.short_description = _('Nível')
+
+
+# Mensagem na área administrativa para o Daily Bonus
+from django.contrib.auth.signals import user_logged_in
+from django.dispatch import receiver
+from django.contrib import messages as dj_messages
+
+@receiver(user_logged_in)
+def notify_daily_bonus(sender, request, user, **kwargs):
+    try:
+        from .models import DailyBonusSeason, DailyBonusClaim
+        from .views.views import _current_bonus_day
+        season = DailyBonusSeason.objects.filter(is_active=True).first()
+        if not season:
+            return
+        today_day = _current_bonus_day(season.reset_hour_utc)
+        if 1 <= today_day <= 31 and not DailyBonusClaim.objects.filter(user=user, season=season, day_of_month=today_day).exists():
+            dj_messages.info(request, _('Você tem um bônus diário disponível!'))
+    except Exception:
+        # nunca quebrar o login por causa de notificação
+        pass
 
 
 @admin.register(BattlePassItemExchange)

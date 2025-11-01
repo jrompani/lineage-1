@@ -12,7 +12,7 @@ from django.contrib import messages
 
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
-from django.utils.translation import activate
+from django.utils.translation import activate, gettext as _
 
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp import login as otp_login
@@ -164,3 +164,23 @@ def verify_2fa_view(request):
     
     context = {'user': request.user}
     return render_theme_page(request, 'accounts_custom', 'verify-2fa.html', context)
+
+
+def config_hub_view(request):
+    # Centralizar links de configuração em uma única tela
+    entries = [
+        { 'title': _('API'), 'url_name': 'api:api_config_panel', 'icon': 'bi-hdd-network' },
+        { 'title': _('Moedas'), 'url_name': 'wallet:coin_config_panel', 'icon': 'bi-coin' },
+        { 'title': _('Shop'), 'url_name': 'shop:dashboard', 'icon': 'bi-bag-check' },
+        { 'title': _('Services'), 'url_name': 'server:configure_service_prices', 'icon': 'bi-gear' },
+        { 'title': _('Apoiadores'), 'url_name': 'server:painel_staff', 'icon': 'bi-people' },
+        { 'title': _('Box Manager'), 'url_name': 'games:box_manager_dashboard', 'icon': 'bi-box-seam' },
+        { 'title': _('Daily Bonus Manager'), 'url_name': 'games:daily_bonus_manager', 'icon': 'bi-calendar-week' },
+        { 'title': _('Roulette Manager'), 'url_name': 'games:roulette_manager', 'icon': 'bi-shuffle' },
+        { 'title': _('Economy Manager'), 'url_name': 'games:economy_manager', 'icon': 'bi-lightning-charge' },
+        { 'title': _('Licenças'), 'url_name': 'licence:dashboard', 'icon': 'bi-patch-check' },
+        { 'title': _('Recursos'), 'url_name': 'resources:dashboard', 'icon': 'bi-archive' },
+        { 'title': _('Enviar Push'), 'url_name': 'notification:send_push', 'icon': 'bi-bell' },
+        { 'title': _('Verificações'), 'url_name': 'social:verification_admin_list', 'icon': 'bi-shield-check' },
+    ]
+    return render(request, 'config/hub.html', { 'entries': entries })

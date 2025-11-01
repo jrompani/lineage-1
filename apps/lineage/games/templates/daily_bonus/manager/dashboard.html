@@ -1,0 +1,141 @@
+{% extends "layouts/base.html" %}
+{% load static i18n get_item %}
+
+{% block extrastyle %}
+<style>
+.manager-bg { background: radial-gradient(ellipse at center, #1a1a2e 0%, #121220 100%); min-height: 100vh; padding: 30px 0; }
+.card-glow { background: linear-gradient(to bottom right, #1a1a2e, #121220); border: 2px solid #6f42c1; border-radius: 12px; box-shadow: 0 0 15px rgba(111,66,193,.5), 0 0 25px rgba(13,202,240,.3); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="manager-bg">
+  <div class="container">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 text-white">
+      <h3 class="m-0">{% trans "Gerenciar Bônus Diário" %}</h3>
+      <a href="{% url 'games:daily_bonus_dashboard' %}" class="btn btn-outline-info rounded-pill">{% trans "Ver Calendário" %}</a>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12 col-lg-5">
+        <div class="card card-glow">
+          <div class="card-header text-white-50">{% trans "Temporada Ativa" %}</div>
+          <div class="card-body">
+            <form method="post" class="row g-2">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="save_season" />
+              {{ season_form.non_field_errors }}
+              <div class="col-12">{{ season_form.name.label_tag }} {{ season_form.name }}</div>
+              <div class="col-6">{{ season_form.start_date.label_tag }} {{ season_form.start_date }}</div>
+              <div class="col-6">{{ season_form.end_date.label_tag }} {{ season_form.end_date }}</div>
+              <div class="col-6">{{ season_form.reset_hour_utc.label_tag }} {{ season_form.reset_hour_utc }}</div>
+              <div class="col-6 form-check mt-4">{{ season_form.is_active }} {{ season_form.is_active.label_tag }}</div>
+              <div class="col-12 text-end mt-2">
+                <button class="btn btn-warning rounded-pill" type="submit">{% trans "Salvar Temporada" %}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-7">
+        <div class="card card-glow h-100">
+          <div class="card-header d-flex justify-content-between align-items-center text-white-50">
+            <span>{% trans "Pool de Itens (Sorteio Aleatório)" %}</span>
+            <form method="post" class="d-flex gap-2 align-items-center">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="add_pool" />
+              {{ pool_form.item }}
+              {{ pool_form.weight }}
+              <button class="btn btn-primary btn-sm" type="submit">{% trans "Adicionar" %}</button>
+            </form>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-dark table-striped mb-0">
+                <thead><tr><th>{% trans "Item" %}</th><th style="width:120px">{% trans "Peso" %}</th><th class="text-end" style="width:120px">{% trans "Ações" %}</th></tr></thead>
+                <tbody>
+                  {% if pool_entries %}
+                    {% for e in pool_entries %}
+                    <tr>
+                      <td>{{ e.item.name }} +{{ e.item.enchant }}</td>
+                      <td>{{ e.weight }}</td>
+                      <td class="text-end">
+                        <form method="post" class="d-inline">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="delete_pool" />
+                          <input type="hidden" name="entry_id" value="{{ e.id }}" />
+                          <button class="btn btn-outline-danger btn-sm" type="submit">{% trans "Remover" %}</button>
+                        </form>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr><td colspan="3" class="text-center text-white-50 py-3">{% trans "Nenhum item no pool." %}</td></tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="card card-glow">
+          <div class="card-header text-white-50 d-flex justify-content-between align-items-center">
+            <span>{% trans "Mapa de Dias" %}</span>
+          </div>
+          <div class="card-body">
+            <div class="row g-2 row-cols-2 row-cols-md-4 row-cols-lg-7">
+              {% for d in days_range %}
+              {% with dd=day_map|get_item:d %}
+                <div class="col">
+                  <div class="card card-glow h-100">
+                    <div class="card-body text-center">
+                      <span class="badge bg-info mb-2">{% trans "Dia" %} {{ d }}</span>
+                      <div class="small text-white-50 mb-2">
+                        {% if dd %}
+                          {% if dd.mode == 'FIXED' and dd.fixed_item %}
+                            {% trans "Fixo" %}: {{ dd.fixed_item.name }} +{{ dd.fixed_item.enchant }}
+                          {% else %}
+                            {% trans "Aleatório do Pool" %}
+                          {% endif %}
+                        {% else %}
+                          {% trans "Aleatório do Pool" %}
+                        {% endif %}
+                      </div>
+                      <form method="post" class="mt-auto">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="save_day" />
+                        <input type="hidden" name="day_of_month" value="{{ d }}" />
+                        <div class="mb-2">
+                          <select name="mode" class="form-control">
+                            <option value="RANDOM" {% if not dd or dd.mode == 'RANDOM' %}selected{% endif %}>{% trans "Aleatório" %}</option>
+                            <option value="FIXED" {% if dd and dd.mode == 'FIXED' %}selected{% endif %}>{% trans "Fixo" %}</option>
+                          </select>
+                        </div>
+                        <div class="mb-2">
+                          <select name="fixed_item" class="form-control">
+                            <option value="" {% if not dd or not dd.fixed_item_id %}selected{% endif %}>— {% trans "Selecione o item" %} —</option>
+                            {% for it in pool_entries %}
+                              <option value="{{ it.item.id }}" {% if dd and dd.fixed_item_id == it.item.id %}selected{% endif %}>{{ it.item.name }} +{{ it.item.enchant }}</option>
+                            {% endfor %}
+                          </select>
+                        </div>
+                        <button class="btn btn-primary btn-sm" type="submit">{% trans "Salvar" %}</button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              {% endwith %}
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

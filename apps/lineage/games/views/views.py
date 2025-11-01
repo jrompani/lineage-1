@@ -14,6 +14,11 @@ from ..services.box_populate import populate_box_with_items
 from django.db import transaction
 from django.db.models import Count, Q
 from django.utils.translation import gettext_lazy as _
+from django.contrib.auth import get_user_model
+import json
+import time
+from datetime import datetime, timezone as dt_timezone
+import calendar
 
 
 def parse_int(value, default=0):
@@ -24,56 +29,124 @@ def parse_int(value, default=0):
 
 
 @conditional_otp_required
+@transaction.atomic
 def spin_ajax(request):
-    if request.user.fichas <= 0:
+    UserModel = get_user_model()
+
+    # Lock the user row to avoid race conditions during concurrent spins
+    user = UserModel.objects.select_for_update().get(pk=request.user.pk)
+
+    if user.fichas <= 0:
         return JsonResponse({'error': _('Você não tem fichas suficientes.')}, status=400)
 
     prizes = list(Prize.objects.all())
     if not prizes:
-        return JsonResponse({'error': _('Nenhum prêmio disponível.')}, status=400)
+        # Auto-popula a tabela de prêmios a partir dos Itens de caixas
+        weight_by_rarity = {
+            'COMUM': 60,
+            'RARE': 25,
+            'RARA': 25,
+            'EPIC': 10,
+            'EPICA': 10,
+            'LEGENDARY': 5,
+            'LENDARIA': 5,
+        }
+        items = Item.objects.filter(can_be_populated=True)
+        created_any = False
+        for it in items:
+            Prize.objects.get_or_create(
+                item=it,
+                defaults={
+                    'name': it.name,
+                    'legacy_item_code': it.item_id,
+                    'enchant': it.enchant,
+                    'rarity': it.rarity,
+                    'weight': weight_by_rarity.get(str(it.rarity).upper(), 10),
+                }
+            )
+            created_any = True
+        prizes = list(Prize.objects.all())
+        if not prizes:
+            return JsonResponse({'error': _('Nenhum prêmio disponível.')}, status=400)
 
-    # Adicione a opção de falha
-    fail_chance = 20  # Representa 20% de chance de falhar
+    # Configurável via GameConfig
+    from ..models import GameConfig
+    cfg = GameConfig.objects.first()
+    fail_chance = cfg.fail_chance if cfg else 20  # fallback para 20%
     total_weight = sum(p.weight for p in prizes)
     fail_weight = total_weight * (fail_chance / (100 - fail_chance))
 
     choices = prizes + [None]  # `None` representa a falha
     weights = [p.weight for p in prizes] + [fail_weight]
 
+    # Auditoria: seed e snapshot de pesos
+    seed = int(time.time_ns())
+    random.seed(seed)
     chosen = random.choices(choices, weights=weights, k=1)[0]
 
-    # Deduz uma ficha
-    request.user.fichas -= 1
-    request.user.save()
+    # Deduz uma ficha de forma transacional
+    user.fichas -= 1
+    user.save(update_fields=["fichas"])
 
     if chosen is None:
+        # Registrar auditoria mesmo em falha
+        SpinHistory.objects.create(
+            user=user,
+            prize=prizes[0],  # dummy prize para manter FK não nula; alternativa seria permitir null
+            fail_chance=fail_chance,
+            seed=seed,
+            weights_snapshot=json.dumps({
+                'prizes': [
+                    {'id': p.id, 'weight': p.weight} for p in prizes
+                ],
+                'fail_weight': fail_weight
+            })
+        )
         return JsonResponse({'fail': True, 'message': _('Você não ganhou nenhum prêmio.')})
 
-    SpinHistory.objects.create(user=request.user, prize=chosen)
+    SpinHistory.objects.create(
+        user=user,
+        prize=chosen,
+        fail_chance=fail_chance,
+        seed=seed,
+        weights_snapshot=json.dumps({
+            'prizes': [
+                {'id': p.id, 'weight': p.weight} for p in prizes
+            ],
+            'fail_weight': fail_weight
+        })
+    )
 
     # Certifique-se de que o usuário tenha uma bag
-    bag, created = Bag.objects.get_or_create(user=request.user)
+    bag, created = Bag.objects.get_or_create(user=user)
 
     # Verifica se o item já existe na bag (mesma id + enchant)
+    resolved_item_id = chosen.item.item_id if getattr(chosen, 'item', None) else chosen.item_id
+    resolved_enchant = chosen.item.enchant if getattr(chosen, 'item', None) else chosen.enchant
+    resolved_name = chosen.item.name if getattr(chosen, 'item', None) else chosen.name
     bag_item, created = BagItem.objects.get_or_create(
         bag=bag,
-        item_id=chosen.item_id,
-        enchant=chosen.enchant,
+        item_id=resolved_item_id,
+        enchant=resolved_enchant,
         defaults={
-            'item_name': chosen.name,
+            'item_name': resolved_name,
             'quantity': 1,
         }
     )
 
     if not created:
         bag_item.quantity += 1
-        bag_item.save()
+        bag_item.save(update_fields=["quantity"])
 
+    # Campos via Item quando disponível
+    resp_name = chosen.item.name if getattr(chosen, 'item_id', None) and chosen.item_id and hasattr(chosen, 'item') and chosen.item else chosen.name
+    resp_item_id = chosen.item.item_id if getattr(chosen, 'item', None) else chosen.legacy_item_code
+    resp_enchant = chosen.item.enchant if getattr(chosen, 'item', None) else chosen.enchant
     return JsonResponse({
         'id': chosen.id,
-        'name': chosen.name,
-        'item_id': chosen.item_id,
-        'enchant': chosen.enchant,
+        'name': resp_name,
+        'item_id': resp_item_id,
+        'enchant': resp_enchant,
         'rarity': chosen.rarity,
         'image_url': chosen.get_image_url()
     })
@@ -81,14 +154,19 @@ def spin_ajax(request):
 
 @conditional_otp_required
 def roulette_page(request):
-    prizes = Prize.objects.all()
-    prize_data = [{
-        'name': prize.name,
-        'image_url': prize.get_image_url(),
-        'item_id': prize.item_id,
-        'enchant': prize.enchant,
-        'rarity': prize.rarity
-    } for prize in prizes]
+    prizes = Prize.objects.select_related('item').all()
+    prize_data = []
+    for prize in prizes:
+        name = prize.item.name if prize.item else prize.name
+        item_id = prize.item.item_id if prize.item else prize.legacy_item_code
+        enchant = prize.item.enchant if prize.item else prize.enchant
+        prize_data.append({
+            'name': name,
+            'image_url': prize.get_image_url(),
+            'item_id': item_id,
+            'enchant': enchant,
+            'rarity': prize.rarity
+        })
 
     total_spins = SpinHistory.objects.filter(user=request.user).count()
     fichas = request.user.fichas
@@ -341,3 +419,118 @@ def esvaziar_bag_para_inventario(request):
         bag.items.all().delete()
         messages.success(request, _('Todos os itens foram transferidos para o inventário.'))
         return redirect('games:bag_dashboard')
+
+
+# ==============================
+# Daily Bonus Views
+# ==============================
+
+def _now_utc():
+    return datetime.now(dt_timezone.utc)
+
+
+def _current_bonus_day(reset_hour_utc: int):
+    now = _now_utc()
+    anchor = now
+    if now.hour < reset_hour_utc:
+        # Antes do reset, considerar o dia anterior
+        anchor = now.replace(day=now.day - 1 if now.day > 1 else 1)
+    return anchor.day
+
+
+@conditional_otp_required
+def daily_bonus_dashboard(request):
+    from ..models import DailyBonusSeason, DailyBonusDay, DailyBonusClaim
+
+    season = DailyBonusSeason.objects.filter(is_active=True).first()
+    if not season:
+        return render(request, 'daily_bonus/dashboard.html', {
+            'season': None,
+            'days': [],
+            'today': None,
+            'can_claim': False,
+        })
+
+    today_day = _current_bonus_day(season.reset_hour_utc)
+    # Quantidade de dias do mês atual (UTC)
+    now = _now_utc()
+    days_in_month = calendar.monthrange(now.year, now.month)[1]
+    month_days = range(1, days_in_month + 1)
+    day_defs = {d.day_of_month: d for d in DailyBonusDay.objects.filter(season=season)}
+    claims = DailyBonusClaim.objects.filter(user=request.user, season=season)
+    claimed_days = set(c.day_of_month for c in claims)
+
+    context_days = []
+    for d in month_days:
+        dd = day_defs.get(d)
+        context_days.append({
+            'day': d,
+            'mode': dd.mode if dd else 'RANDOM',
+            'fixed_item': dd.fixed_item if dd else None,
+            'claimed': d in claimed_days,
+            'is_today': d == today_day,
+        })
+
+    # Só permite claim se o dia existe no mês corrente
+    can_claim = (today_day not in claimed_days) and (1 <= today_day <= days_in_month)
+
+    return render(request, 'daily_bonus/dashboard.html', {
+        'season': season,
+        'days': context_days,
+        'today': today_day,
+        'can_claim': can_claim,
+    })
+
+
+@conditional_otp_required
+@transaction.atomic
+def daily_bonus_claim(request):
+    from ..models import DailyBonusSeason, DailyBonusDay, DailyBonusClaim, DailyBonusPoolEntry, Item
+
+    season = DailyBonusSeason.objects.filter(is_active=True).select_for_update().first()
+    if not season:
+        messages.error(request, _('Nenhuma temporada de bônus diária ativa.'))
+        return redirect('games:daily_bonus_dashboard')
+
+    today_day = _current_bonus_day(season.reset_hour_utc)
+    # Validar contra o número de dias do mês corrente (UTC)
+    now = _now_utc()
+    days_in_month = calendar.monthrange(now.year, now.month)[1]
+    if not (1 <= today_day <= days_in_month):
+        messages.error(request, _('Fora da janela de dias válidos.'))
+        return redirect('games:daily_bonus_dashboard')
+
+    if DailyBonusClaim.objects.filter(user=request.user, season=season, day_of_month=today_day).exists():
+        messages.info(request, _('Você já resgatou o prêmio de hoje.'))
+        return redirect('games:daily_bonus_dashboard')
+
+    # Resolver prêmio do dia
+    day_def = DailyBonusDay.objects.filter(season=season, day_of_month=today_day).first()
+    chosen_item = None
+    if day_def and day_def.mode == 'FIXED' and day_def.fixed_item:
+        chosen_item = day_def.fixed_item
+    else:
+        pool = list(DailyBonusPoolEntry.objects.filter(season=season))
+        if not pool:
+            messages.error(request, _('Pool de itens da temporada está vazio.'))
+            return redirect('games:daily_bonus_dashboard')
+        choices = [p.item for p in pool]
+        weights = [p.weight for p in pool]
+        chosen_item = random.choices(choices, weights=weights, k=1)[0]
+
+    # Enviar para a Bag
+    bag, created = Bag.objects.get_or_create(user=request.user)
+    bag_item, created = BagItem.objects.get_or_create(
+        bag=bag,
+        item_id=chosen_item.item_id,
+        enchant=chosen_item.enchant,
+        defaults={'item_name': chosen_item.name, 'quantity': 1}
+    )
+    if not created:
+        bag_item.quantity += 1
+        bag_item.save(update_fields=['quantity'])
+
+    DailyBonusClaim.objects.create(user=request.user, season=season, day_of_month=today_day)
+
+    messages.success(request, _('Prêmio diário resgatado com sucesso!'))
+    return redirect('games:daily_bonus_dashboard')

@@ -119,3 +119,88 @@ class ItemForm(forms.ModelForm):
             'rarity': _('Raridade'),
             'can_be_populated': _('Pode ser populado em caixas'),
         }
+
+
+# Roulette Manager Form
+class PrizeManagerForm(forms.ModelForm):
+    class Meta:
+        model = Prize
+        fields = ['item', 'weight']
+        widgets = {
+            'item': forms.Select(attrs={'class': 'form-control'}),
+            'weight': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        }
+        labels = {
+            'item': _('Item'),
+            'weight': _('Peso'),
+        }
+
+
+# Economy Manager Forms
+class MonsterManagerForm(forms.ModelForm):
+    class Meta:
+        model = Monster
+        fields = ['name', 'level', 'required_weapon_level', 'fragment_reward', 'respawn_seconds', 'image', 'attack', 'defense', 'hp']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'level': forms.NumberInput(attrs={'class': 'form-control'}),
+            'required_weapon_level': forms.NumberInput(attrs={'class': 'form-control'}),
+            'fragment_reward': forms.NumberInput(attrs={'class': 'form-control'}),
+            'respawn_seconds': forms.NumberInput(attrs={'class': 'form-control'}),
+            'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'attack': forms.NumberInput(attrs={'class': 'form-control'}),
+            'defense': forms.NumberInput(attrs={'class': 'form-control'}),
+            'hp': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+
+
+class RewardItemManagerForm(forms.ModelForm):
+    class Meta:
+        model = RewardItem
+        fields = ['item', 'amount']
+        widgets = {
+            'item': forms.Select(attrs={'class': 'form-control'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        }
+        labels = {
+            'item': _('Item (recompensa +10)'),
+            'amount': _('Quantidade'),
+        }
+
+
+# ==============================
+# Daily Bonus Manager Forms
+# ==============================
+
+class DailyBonusSeasonForm(forms.ModelForm):
+    class Meta:
+        model = DailyBonusSeason
+        fields = ['name', 'is_active', 'start_date', 'end_date', 'reset_hour_utc']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'start_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'end_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'reset_hour_utc': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 23}),
+        }
+
+
+class DailyBonusPoolEntryForm(forms.ModelForm):
+    class Meta:
+        model = DailyBonusPoolEntry
+        fields = ['item', 'weight']
+        widgets = {
+            'item': forms.Select(attrs={'class': 'form-control'}),
+            'weight': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        }
+
+
+class DailyBonusDayForm(forms.ModelForm):
+    class Meta:
+        model = DailyBonusDay
+        fields = ['day_of_month', 'mode', 'fixed_item']
+        widgets = {
+            'day_of_month': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 31}),
+            'mode': forms.Select(attrs={'class': 'form-control'}),
+            'fixed_item': forms.Select(attrs={'class': 'form-control'}),
+        }

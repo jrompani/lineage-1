@@ -1,5 +1,5 @@
 {% extends "layouts/base.html" %}
-{% load static %}
+{% load static i18n %}
 
 {% block extrastyle %}
 <link rel="stylesheet" href="{% static 'roulette/style.css' %}">
@@ -8,7 +8,7 @@
 {% block content %}
 <div class="roulette-bg py-5">
 
-  <div class="user-panel my-4 mx-3">
+  <div class="user-panel my-4 mx-3" role="region" aria-label="Painel do Usuário">
     <div class="info-block">
       <strong>🎫 Fichas</strong>
       <span id="userFichas">{{ fichas }}</span>
@@ -26,16 +26,16 @@
   <!-- Botão de Comprar Fichas -->
   <div class="text-center mt-4 mb-4">
     <button class="btn btn-warning btn-lg rounded-pill" data-bs-toggle="modal" data-bs-target="#buyTokensModal">
-      <i class="bi bi-cart-plus me-2"></i> Comprar Fichas
+      <i class="bi bi-cart-plus me-2"></i> {% trans "Comprar Fichas" %}
     </button>
   </div>
 
   <div class="container">
     <div class="text-center mb-5">
       <h2 class="fw-bold text-glow text-white">
-        <i class="bi bi-stars me-2 text-white"></i> Roleta de Prêmios
+        <i class="bi bi-stars me-2 text-white"></i> {% trans "Roleta de Prêmios" %}
       </h2>
-      <p class="text-white">Gire a roleta e conquiste itens lendários!</p>
+      <p class="text-white">{% trans "Gire a roleta e conquiste itens lendários!" %}</p>
     </div>
 
     <div class="roulette-wrapper d-flex justify-content-center position-relative">
@@ -52,8 +52,11 @@
         </video>
     
         <!-- Conteúdo do card -->
-        <div class="roulette-window position-relative mb-3">
-          <ul id="rouletteList" class="roulette-list"></ul>
+        <div class="roulette-window position-relative mb-3" role="region" aria-label="Janela da Roleta">
+          <div class="mask-top"></div>
+          <ul id="rouletteList" class="roulette-list" aria-live="polite"></ul>
+          <div class="mask-bottom"></div>
+          <div class="roulette-pointer" aria-hidden="true"></div>
         </div>
     
         <button id="spinBtn" class="btn btn-primary btn-lg rounded-pill px-5 mt-3 glow-button pulse">
@@ -86,7 +89,7 @@
       </div>
       <div class="modal-footer border-0 justify-content-center">
         <button type="button" class="btn btn-glow text-white px-4 py-2 rounded-pill" data-bs-dismiss="modal">
-          Fechar
+          {% trans "Fechar" %}
         </button>
       </div>      
     </div>
@@ -97,9 +100,9 @@
 <div class="modal fade" id="failModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content text-center p-4">
-      <h5 class="modal-title">Que pena!</h5>
-      <p class="text-white">Você não ganhou nenhum prêmio desta vez. Tente novamente!</p>
-      <button class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+      <h5 class="modal-title">{% trans "Que pena!" %}</h5>
+      <p class="text-white">{% trans "Você não ganhou nenhum prêmio desta vez. Tente novamente!" %}</p>
+      <button class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Fechar" %}</button>
     </div>
   </div>
 </div>
@@ -108,10 +111,10 @@
 <div class="modal fade" id="buyTokensModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content text-center p-4">
-      <h5 class="modal-title mb-3">Comprar Fichas</h5>
-      <p class="text-white">Escolha a quantidade de fichas que deseja comprar. Valor: R$0,10 por ficha.</p>
+      <h5 class="modal-title mb-3">{% trans "Comprar Fichas" %}</h5>
+      <p class="text-white">{% trans "Escolha a quantidade de fichas que deseja comprar. Valor: R$0,10 por ficha." %}</p>
       <input type="number" id="buyQuantity" class="form-control mb-3" min="1" value="1">
-      <button class="btn btn-success" onclick="buyFichas()">Confirmar Compra</button>
+      <button class="btn btn-success" onclick="buyFichas()">{% trans "Confirmar Compra" %}</button>
     </div>
   </div>
 </div>

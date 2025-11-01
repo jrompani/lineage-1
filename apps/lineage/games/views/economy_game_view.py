@@ -8,7 +8,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.http import JsonResponse
 
-from ..models import EconomyWeapon, Monster, Bag, BagItem, RewardItem
+from ..models import EconomyWeapon, Monster, Bag, BagItem, RewardItem, Item
 
 
 def add_reward_to_bag(user, item_id, item_name, enchant=0, quantity=1):
@@ -141,15 +141,14 @@ def enchant_weapon(request):
             weapon.level = 0
             weapon.fragments = 0
 
-            reward = RewardItem.objects.first()
+            # Recompensa: prioriza configuração específica; senão usa pool de Itens das caixas
+            reward = RewardItem.objects.select_related('item').first()
             if reward:
-                add_reward_to_bag(
-                    request.user,
-                    reward.item_id,
-                    reward.name,
-                    reward.enchant,
-                    reward.amount
-                )
+                add_reward_to_bag(request.user, reward.item.item_id, reward.item.name, reward.item.enchant, reward.amount)
+            else:
+                pool_item = Item.objects.filter(can_be_populated=True).order_by('?').first()
+                if pool_item:
+                    add_reward_to_bag(request.user, pool_item.item_id, pool_item.name, pool_item.enchant, 1)
 
         else:
             messages.success(request, f"Enchant bem-sucedido! Sua arma está em +{weapon.level}.")

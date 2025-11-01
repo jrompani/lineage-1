@@ -45,18 +45,22 @@
       const toggle = document.getElementById('configToggle');
       const submenu = document.getElementById('configSubmenu');
   
-      toggle.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation(); // impede o fechamento automático
-        submenu.classList.toggle('d-none');
-      });
+      if (toggle && submenu) {
+        toggle.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation(); // impede o fechamento automático
+          submenu.classList.toggle('d-none');
+        });
+      }
   
       // Fecha o submenu quando o dropdown principal for fechado
-      document.querySelectorAll('.dropdown').forEach(dropdown => {
-        dropdown.addEventListener('hide.bs.dropdown', function () {
-          submenu.classList.add('d-none');
+      if (submenu) {
+        document.querySelectorAll('.dropdown').forEach(dropdown => {
+          dropdown.addEventListener('hide.bs.dropdown', function () {
+            submenu.classList.add('d-none');
+          });
         });
-      });
+      }
     });
   </script>
   <script>

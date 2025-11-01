@@ -1,0 +1,44 @@
+{% extends "layouts/base.html" %}
+{% load static i18n %}
+
+{% block extrastyle %}
+<style>
+.config-bg { background: radial-gradient(ellipse at center, #1a1a2e 0%, #121220 100%); min-height: 100vh; padding: 40px 0; }
+.card-glow { background: linear-gradient(180deg, #1a1a2e, #121220); border: 2px solid #6f42c1; border-radius: 16px; box-shadow: 0 0 18px rgba(111,66,193,.5), 0 0 28px rgba(13,202,240,.3); transition: transform .15s ease, box-shadow .2s ease; }
+.card-glow:hover { transform: translateY(-2px); box-shadow: 0 0 22px rgba(111,66,193,.7), 0 0 34px rgba(13,202,240,.5); }
+.btn-config { background: linear-gradient(90deg, #0dcaf0, #6f42c1); border: 0; box-shadow: 0 0 14px #6f42c1, 0 0 22px #0dcaf0; }
+.icon-wrap { width: 48px; height: 48px; border-radius: 12px; background: rgba(13,202,240,.08); display: inline-flex; align-items: center; justify-content: center; margin-right: .5rem; }
+.icon-wrap svg { width: 24px; height: 24px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="config-bg">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="text-white m-0">{% trans "Central de Configurações" %}</h3>
+      <a href="{% url 'dashboard' %}" class="btn btn-config rounded-pill text-white"><i class="bi bi-sliders me-2"></i>{% trans "Voltar ao Dashboard" %}</a>
+    </div>
+
+    <div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4">
+      {% for e in entries %}
+      <div class="col">
+        <a href="{% url e.url_name %}" class="text-decoration-none">
+          <div class="card card-glow h-100">
+            <div class="card-body d-flex align-items-start text-white">
+              <span class="icon-wrap me-2">
+                <i class="bi {{ e.icon }} text-info"></i>
+              </span>
+              <div>
+                <div class="fw-bold">{{ e.title }}</div>
+                <div class="text-white-50 small">{% trans "Acessar módulo de configuração" %}</div>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

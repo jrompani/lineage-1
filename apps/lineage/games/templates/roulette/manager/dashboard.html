@@ -1,0 +1,93 @@
+{% extends "layouts/base.html" %}
+{% load static i18n %}
+
+{% block extrastyle %}
+<style>
+.mgr-bg { background: radial-gradient(ellipse at center, #1a1a2e 0%, #121220 100%); min-height: 100vh; padding: 30px 0; }
+.card-glow { background: linear-gradient(to bottom right, #1a1a2e, #121220); border: 2px solid #6f42c1; border-radius: 12px; box-shadow: 0 0 15px rgba(111,66,193,.5), 0 0 25px rgba(13,202,240,.3); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mgr-bg">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4 text-white">
+      <h3 class="m-0">{% trans "Gerenciar Roleta" %}</h3>
+      <a href="{% url 'games:roulette_page' %}" class="btn btn-outline-info rounded-pill">{% trans "Ver Roleta" %}</a>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12 col-lg-5">
+        <div class="card card-glow">
+          <div class="card-header text-white-50">{% trans "Adicionar Prêmio" %}</div>
+          <div class="card-body">
+            <form method="post" class="row g-2">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="add" />
+              <div class="col-12">{{ form.item.label_tag }} {{ form.item }}</div>
+              <div class="col-6">{{ form.weight.label_tag }} {{ form.weight }}</div>
+              <div class="col-12 text-end">
+                <button class="btn btn-warning rounded-pill" type="submit">{% trans "Adicionar" %}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-7">
+        <div class="card card-glow h-100">
+          <div class="card-header text-white-50 d-flex justify-content-between align-items-center">
+            <span>{% trans "Prêmios Atuais" %}</span>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-dark table-striped mb-0">
+                <thead>
+                  <tr>
+                    <th>{% trans "Item" %}</th>
+                    <th style="width:120px">{% trans "Peso" %}</th>
+                    <th class="text-end" style="width:180px">{% trans "Ações" %}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for p in prizes %}
+                    <tr>
+                      <td>
+                        {% if p.item and p.item.image %}
+                          <img src="{{ p.item.image.url }}" alt="" width="28" height="28" style="object-fit:cover; border-radius:4px; margin-right:6px;"/>
+                        {% endif %}
+                        {{ p.item.name|default:p.name }} +{{ p.item.enchant|default:p.enchant }}
+                      </td>
+                      <td>
+                        <form method="post" class="d-flex gap-2 align-items-center">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="update_weight" />
+                          <input type="hidden" name="prize_id" value="{{ p.id }}" />
+                          <input type="number" class="form-control form-control-sm" style="max-width:90px" name="weight" value="{{ p.weight }}" min="1" />
+                          <button class="btn btn-primary btn-sm" type="submit">{% trans "Salvar" %}</button>
+                        </form>
+                      </td>
+                      <td class="text-end">
+                        <form method="post" class="d-inline">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="delete" />
+                          <input type="hidden" name="prize_id" value="{{ p.id }}" />
+                          <button class="btn btn-outline-danger btn-sm" type="submit">{% trans "Remover" %}</button>
+                        </form>
+                      </td>
+                    </tr>
+                  {% empty %}
+                    <tr><td colspan="3" class="text-center text-white-50 py-3">{% trans "Nenhum prêmio cadastrado." %}</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+{% endblock %}
+
+

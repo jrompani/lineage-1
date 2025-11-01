@@ -338,13 +338,63 @@
         <!-- Botão de Admin -->
         {% if request.user.is_staff %}
         <li class="nav-item">
-          <a href="{% url 'admin:index' %}" class="btn btn-link px-2 me-2" title="{% trans 'Acessar Admin' %}">
+          <a href="#" class="btn btn-link px-2 me-2" title="{% trans 'Acessar Admin' %}" data-bs-toggle="modal" data-bs-target="#confirmAdminModal">
             <svg class="icon icon-sm text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
             </svg>
           </a>
         </li>
         {% endif %}
+        
+        <!-- Modal de confirmação para Admin -->
+        <div class="modal fade" id="confirmAdminModal" tabindex="-1" aria-labelledby="confirmAdminModalLabel" aria-hidden="true" data-bs-backdrop="false" data-bs-keyboard="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="confirmAdminModalLabel">{% trans "Confirmar acesso ao Django Admin" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                {% trans "Você está prestes a sair do painel e acessar o Django Admin. Deseja continuar?" %}
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancelar" %}</button>
+                <button type="button" class="btn btn-primary" id="confirmAdminGo">{% trans "Continuar" %}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <script>
+          document.addEventListener('DOMContentLoaded', function () {
+            const goBtn = document.getElementById('confirmAdminGo');
+            const modalEl = document.getElementById('confirmAdminModal');
+            if (goBtn && modalEl) {
+              // Garante que o modal esteja no <body> para evitar contextos de z-index estranhos
+              if (modalEl.parentElement !== document.body) {
+                document.body.appendChild(modalEl);
+              }
+              goBtn.addEventListener('click', function () {
+                const existing = (bootstrap.Modal && bootstrap.Modal.getInstance) ? bootstrap.Modal.getInstance(modalEl) : null;
+                const modal = existing || new bootstrap.Modal(modalEl);
+                function onHidden() {
+                  modalEl.removeEventListener('hidden.bs.modal', onHidden);
+                  window.location.href = "{% url 'admin:index' %}";
+                }
+                modalEl.addEventListener('hidden.bs.modal', onHidden);
+                modal.hide();
+              });
+            }
+
+            // Cleanup geral para evitar backdrop preso
+            if (modalEl) {
+              modalEl.addEventListener('hidden.bs.modal', function () {
+                document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('paddingRight');
+              });
+            }
+          });
+        </script>
         
         <li class="nav-item dropdown">
           <a class="nav-link text-dark notification-bell read dropdown-toggle" id="notificationToggle" data-unread-notifications="true" href="#" role="button" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false">
@@ -428,29 +478,15 @@
 
               {% if request.user.is_staff %}
               <div role="separator" class="dropdown-divider my-1"></div>
-              <div class="dropdown-submenu-manual">
-                <a class="dropdown-item d-flex align-items-center" href="#" id="configToggle">
-                  <svg class="dropdown-icon text-gray-400 me-2" fill="currentColor" viewBox="0 0 20 20"
-                    xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd"
-                      d="M11.3 1.046a1 1 0 011.4 0l1.8 1.8a1 1 0 010 1.4L6.207 12.54a1 1 0 01-.516.27l-3.286.657a.5.5 0 01-.588-.588l.657-3.286a1 1 0 01.27-.516L11.3 1.046zM4.5 13l2.5-.5.5-2.5-1.5-1.5-2.5.5-.5 2.5L4.5 13z"
-                      clip-rule="evenodd" />
-                  </svg>
-                  {% trans "Configurações" %}
-                </a>
-                <div class="submenu-items mt-1 ms-4 d-none" id="configSubmenu">
-                  <a class="dropdown-item" href="{% url 'api:api_config_panel' %}">{% trans "API" %}</a>
-                  <a class="dropdown-item" href="{% url 'wallet:coin_config_panel' %}">{% trans "Moedas" %}</a>
-                  <a class="dropdown-item" href="{% url 'shop:dashboard' %}">{% trans "Shop" %}</a>
-                  <a class="dropdown-item" href="{% url 'server:configure_service_prices' %}">{% trans "Services" %}</a>
-                  <a class="dropdown-item" href="{% url 'server:painel_staff' %}">{% trans "Apoiadores" %}</a>
-                  <a class="dropdown-item" href="{% url 'games:box_manager_dashboard' %}">{% trans "Box Manager" %}</a>
-                  <a class="dropdown-item" href="{% url 'licence:dashboard' %}">{% trans "Licenças" %}</a>
-                  <a class="dropdown-item" href="{% url 'resources:dashboard' %}">{% trans "Recursos" %}</a>
-                  <a class="dropdown-item" href="{% url 'notification:send_push' %}">{% trans "Enviar Push" %}</a>
-                  <a class="dropdown-item" href="{% url 'social:verification_admin_list' %}">{% trans "Verificações" %}</a>
-                </div>                
-              </div>
+              <a class="dropdown-item d-flex align-items-center" href="{% url 'config_hub' %}">
+                <svg class="dropdown-icon text-warning me-2" fill="currentColor" viewBox="0 0 20 20"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd"
+                    d="M11.3 1.046a1 1 0 011.4 0l1.8 1.8a1 1 0 010 1.4L6.207 12.54a1 1 0 01-.516.27l-3.286.657a.5.5 0 01-.588-.588l.657-3.286a1 1 0 01.27-.516L11.3 1.046zM4.5 13l2.5-.5.5-2.5-1.5-1.5-2.5.5-.5 2.5L4.5 13z"
+                    clip-rule="evenodd" />
+                </svg>
+                <span class="text-warning fw-bold">{% trans "Config Hub" %}</span>
+              </a>
             {% endif %}
 
               <div role="separator" class="dropdown-divider my-1"></div>
