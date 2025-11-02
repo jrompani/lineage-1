@@ -9,14 +9,34 @@
 {% block content %}
 <div class="reports-container">
   <div class="container">
-    <!-- Header -->
-    <div class="reports-header">
-      <h1 class="reports-title">
-        <i class="fas fa-exchange-alt me-3"></i>{% trans "Marketplace de Personagens" %}
+    <!-- Header Épico -->
+    <div class="reports-header marketplace-header">
+      <div class="marketplace-header-icon">
+        <i class="fas fa-dragon"></i>
+      </div>
+      <h1 class="reports-title marketplace-title">
+        {% trans "Marketplace de Personagens" %}
       </h1>
-      <p class="reports-subtitle">
-        {% trans "Compre e venda personagens com segurança" %}
+      <p class="reports-subtitle marketplace-subtitle">
+        <i class="fas fa-shield-alt me-2"></i>{% trans "Compre e venda personagens épicos com total segurança" %}
       </p>
+      <div class="marketplace-stats">
+        <div class="stat-box">
+          <i class="fas fa-users"></i>
+          <span class="stat-value">{{ transfers|length }}</span>
+          <span class="stat-label">{% trans "Personagens" %}</span>
+        </div>
+        <div class="stat-box">
+          <i class="fas fa-fire"></i>
+          <span class="stat-value">{% trans "LIVE" %}</span>
+          <span class="stat-label">{% trans "Marketplace" %}</span>
+        </div>
+        <div class="stat-box">
+          <i class="fas fa-check-circle"></i>
+          <span class="stat-value">100%</span>
+          <span class="stat-label">{% trans "Seguro" %}</span>
+        </div>
+      </div>
     </div>
 
     <!-- Breadcrumbs -->
@@ -29,16 +49,45 @@
       </ol>
     </nav>
 
-    <!-- Action Buttons -->
-    <div class="marketplace-actions mb-4">
-      <a href="{% url 'marketplace:sell' %}" class="reports-button">
-        <i class="fas fa-plus-circle me-2"></i>{% trans "Vender Personagem" %}
+    <!-- Action Buttons Épicos -->
+    <div class="marketplace-actions-epic">
+      <a href="{% url 'marketplace:sell' %}" class="action-card action-sell">
+        <div class="action-icon">
+          <i class="fas fa-plus-circle"></i>
+        </div>
+        <div class="action-content">
+          <h3 class="action-title">{% trans "Vender Personagem" %}</h3>
+          <p class="action-description">{% trans "Liste seu personagem no marketplace" %}</p>
+        </div>
+        <div class="action-arrow">
+          <i class="fas fa-chevron-right"></i>
+        </div>
       </a>
-      <a href="{% url 'marketplace:my_sales' %}" class="reports-button">
-        <i class="fas fa-list me-2"></i>{% trans "Minhas Vendas" %}
+      
+      <a href="{% url 'marketplace:my_sales' %}" class="action-card action-sales">
+        <div class="action-icon">
+          <i class="fas fa-list-alt"></i>
+        </div>
+        <div class="action-content">
+          <h3 class="action-title">{% trans "Minhas Vendas" %}</h3>
+          <p class="action-description">{% trans "Personagens que você está vendendo" %}</p>
+        </div>
+        <div class="action-arrow">
+          <i class="fas fa-chevron-right"></i>
+        </div>
       </a>
-      <a href="{% url 'marketplace:my_purchases' %}" class="reports-button">
-        <i class="fas fa-shopping-bag me-2"></i>{% trans "Minhas Compras" %}
+      
+      <a href="{% url 'marketplace:my_purchases' %}" class="action-card action-purchases">
+        <div class="action-icon">
+          <i class="fas fa-shopping-bag"></i>
+        </div>
+        <div class="action-content">
+          <h3 class="action-title">{% trans "Minhas Compras" %}</h3>
+          <p class="action-description">{% trans "Personagens que você adquiriu" %}</p>
+        </div>
+        <div class="action-arrow">
+          <i class="fas fa-chevron-right"></i>
+        </div>
       </a>
     </div>
 
@@ -81,7 +130,7 @@
             <div class="character-price">
               <span class="price-label">{% trans "Preço" %}</span>
               <div class="price-value">
-                <span class="currency">{{ transfer.currency }}</span>
+                <span class="currency">R$</span>
                 <span class="amount">{{ transfer.price }}</span>
               </div>
             </div>

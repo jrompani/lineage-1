@@ -25,9 +25,6 @@ TRANSACTION_STATUS_CHOICES = [
 
 CURRENCY_CHOICES = [
     ('BRL', _('Real (R$)')),
-    ('USD', _('Dólar (US$)')),
-    ('EUR', _('Euro (€)')),
-    ('COIN', _('Moeda do Jogo')),
 ]
 
 CLAIM_STATUS_CHOICES = [

@@ -39,6 +39,22 @@
         <p class="reports-card-description">{% trans "Preencha os dados para listar seu personagem" %}</p>
       </div>
       <div class="reports-card-body">
+        {% if not characters %}
+        <div class="empty-state">
+          <i class="fas fa-user-slash fa-3x mb-3"></i>
+          <p>{% trans "Você não possui personagens disponíveis para venda no momento." %}</p>
+          <p class="small text-muted">
+            {% trans "Isso pode acontecer se:" %}<br>
+            • {% trans "Você não tem personagens no jogo" %}<br>
+            • {% trans "Todos seus personagens já estão listados para venda" %}<br>
+            • {% trans "Seus personagens são Game Masters (GMs não podem ser vendidos)" %}<br>
+            • {% trans "O banco do jogo está temporariamente indisponível" %}
+          </p>
+          <a href="{% url 'marketplace:list' %}" class="btn btn-primary mt-3">
+            <i class="fas fa-arrow-left me-2"></i>{% trans "Voltar ao Marketplace" %}
+          </a>
+        </div>
+        {% else %}
         <form method="post" id="sellForm">
           {% csrf_token %}
           
@@ -49,7 +65,20 @@
               <label for="character_select">{% trans "Personagem" %} *</label>
               <select class="form-control" id="character_select" name="char_id" required>
                 <option value="">{% trans "Selecione um personagem" %}</option>
-                <!-- Populated by JavaScript -->
+                {% if characters %}
+                  {% for char in characters %}
+                  <option value="{{ char.char_id }}" 
+                          data-level="{{ char.level }}" 
+                          data-class="{{ char.classid }}"
+                          data-pvp="{{ char.pvp_kills|default:0 }}"
+                          data-pk="{{ char.pk_count|default:0 }}"
+                          data-clan="{{ char.clan_name|default:'' }}">
+                    {{ char.char_name }} - Lv. {{ char.level }} {% if char.clan_name %}({{ char.clan_name }}){% endif %}
+                  </option>
+                  {% endfor %}
+                {% else %}
+                  <option value="" disabled>{% trans "Nenhum personagem disponível" %}</option>
+                {% endif %}
               </select>
               <small class="form-text text-muted">
                 {% trans "Selecione qual personagem deseja vender" %}
@@ -64,27 +93,19 @@
           <div class="form-section">
             <h4><i class="fas fa-dollar-sign me-2"></i>{% trans "Preço" %}</h4>
             
-            <div class="row">
-              <div class="col-md-8">
-                <div class="form-group">
-                  <label for="price">{% trans "Preço" %} *</label>
-                  <input type="number" class="form-control" id="price" name="price" 
-                         min="0" step="0.01" required>
-                  <small class="form-text text-muted">
-                    {% trans "Defina o preço do seu personagem" %}
-                  </small>
-                </div>
+            <div class="form-group">
+              <label for="price">{% trans "Preço em Reais (R$)" %} *</label>
+              <div class="input-group">
+                <span class="input-group-text" style="background: rgba(111, 66, 193, 0.2); border: 2px solid rgba(111, 66, 193, 0.4); color: #0dcaf0; font-family: 'Orbitron', sans-serif; font-weight: 700;">
+                  R$
+                </span>
+                <input type="number" class="form-control" id="price" name="price" 
+                       min="1" step="0.01" placeholder="0.00" required>
               </div>
-              <div class="col-md-4">
-                <div class="form-group">
-                  <label for="currency">{% trans "Moeda" %} *</label>
-                  <select class="form-control" id="currency" name="currency" required>
-                    <option value="BRL">BRL (R$)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                  </select>
-                </div>
-              </div>
+              <small class="form-text text-muted">
+                {% trans "O valor será debitado/creditado na carteira (wallet) do comprador/vendedor" %}
+              </small>
+              <input type="hidden" name="currency" value="BRL">
             </div>
           </div>
 
@@ -110,6 +131,7 @@
             </a>
           </div>
         </form>
+        {% endif %}
       </div>
     </div>
 
@@ -126,15 +148,70 @@
 {% block extrajs %}
 <script src="{% static 'marketplace/js/marketplace.js' %}?v=1.0"></script>
 <script>
-  // Load user characters
   document.addEventListener('DOMContentLoaded', function() {
-    loadUserCharacters();
+    const characterSelect = document.getElementById('character_select');
+    const characterPreview = document.getElementById('character_preview');
+    
+    if (characterSelect) {
+      characterSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        
+        if (this.value) {
+          const charData = {
+            name: selectedOption.text.split(' - ')[0],
+            level: selectedOption.dataset.level,
+            classId: selectedOption.dataset.class,
+            pvp: selectedOption.dataset.pvp,
+            pk: selectedOption.dataset.pk,
+            clan: selectedOption.dataset.clan
+          };
+          
+          showCharacterPreview(charData);
+        } else {
+          characterPreview.style.display = 'none';
+        }
+      });
+    }
+    
+    function showCharacterPreview(char) {
+      characterPreview.style.display = 'block';
+      characterPreview.innerHTML = `
+        <div class="character-preview-content" style="text-align: center;">
+          <i class="fas fa-user-shield fa-3x mb-3" style="color: #0dcaf0; text-shadow: 0 0 25px rgba(13, 202, 240, 0.9);"></i>
+          <h5 style="color: #fff; font-family: 'Orbitron', sans-serif; margin-bottom: 1.5rem; text-transform: uppercase;">
+            ✨ ${char.name}
+          </h5>
+          <div class="row text-center" style="color: #e0e0e0; font-family: 'Orbitron', sans-serif;">
+            <div class="col-6 mb-3">
+              <div style="background: rgba(111, 66, 193, 0.2); padding: 1rem; border-radius: 10px; border: 1px solid rgba(111, 66, 193, 0.4);">
+                <i class="fas fa-level-up-alt" style="color: #10b981; text-shadow: 0 0 10px rgba(16, 185, 129, 0.8);"></i>
+                <div style="margin-top: 0.5rem;">Level: <strong style="color: #10b981;">${char.level}</strong></div>
+              </div>
+            </div>
+            <div class="col-6 mb-3">
+              <div style="background: rgba(111, 66, 193, 0.2); padding: 1rem; border-radius: 10px; border: 1px solid rgba(111, 66, 193, 0.4);">
+                <i class="fas fa-sword" style="color: #0dcaf0; text-shadow: 0 0 10px rgba(13, 202, 240, 0.8);"></i>
+                <div style="margin-top: 0.5rem;">PvP: <strong style="color: #0dcaf0;">${char.pvp}</strong></div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div style="background: rgba(111, 66, 193, 0.2); padding: 1rem; border-radius: 10px; border: 1px solid rgba(111, 66, 193, 0.4);">
+                <i class="fas fa-skull" style="color: #e83e8c; text-shadow: 0 0 10px rgba(232, 62, 140, 0.8);"></i>
+                <div style="margin-top: 0.5rem;">PK: <strong style="color: #e83e8c;">${char.pk}</strong></div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div style="background: rgba(111, 66, 193, 0.2); padding: 1rem; border-radius: 10px; border: 1px solid rgba(111, 66, 193, 0.4);">
+                <i class="fas fa-shield-alt" style="color: #f59e0b; text-shadow: 0 0 10px rgba(245, 158, 11, 0.8);"></i>
+                <div style="margin-top: 0.5rem;">Clan: <strong style="color: #f59e0b;">${char.clan || 'Nenhum'}</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      characterPreview.style.animation = 'popIn 0.4s ease-out';
+    }
   });
-
-  function loadUserCharacters() {
-    // TODO: Implement AJAX call to load user characters
-    console.log('Loading user characters...');
-  }
 </script>
 {% endblock %}
 

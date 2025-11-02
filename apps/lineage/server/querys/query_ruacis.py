@@ -967,16 +967,9 @@ class LineageMarketplace:
                 c.pkkills as pk_count,
                 c.clanid,
                 COALESCE(cs.name, '') as clan_name,
-                COALESCE(c.adena, 0) as adena,
-                c.x, c.y, c.z,
-                c.face, c.hairStyle, c.hairColor,
                 c.accesslevel,
                 c.online,
                 c.lastAccess,
-                c.maxHp, c.curHp,
-                c.maxMp, c.curMp,
-                c.STR, c.CON, c.DEX, c.INT, c.WIT, c.MEN,
-                c.karma, c.exp, c.sp,
                 c.account_name
             FROM characters c
             LEFT JOIN clan_data cd ON c.clanid = cd.clan_id
@@ -1013,24 +1006,15 @@ class LineageMarketplace:
                 c.obj_Id as char_id,
                 c.char_name,
                 c.level,
-                c.exp,
-                c.sp,
                 c.classid,
                 c.pvpkills as pvp_kills,
                 c.pkkills as pk_count,
-                c.karma,
                 c.clanid,
                 COALESCE(cs.name, '') as clan_name,
-                COALESCE(c.adena, 0) as adena,
-                c.maxHp, c.curHp,
-                c.maxMp, c.curMp,
-                c.STR, c.CON, c.DEX, c.INT, c.WIT, c.MEN,
-                c.face, c.hairStyle, c.hairColor,
                 c.accesslevel,
                 c.online,
                 c.lastAccess,
-                c.account_name,
-                c.x, c.y, c.z
+                c.account_name
             FROM characters c
             LEFT JOIN clan_data cd ON c.clanid = cd.clan_id
             LEFT JOIN clan_subpledges cs ON cs.clan_id = cd.clan_id AND cs.sub_pledge_id = 0

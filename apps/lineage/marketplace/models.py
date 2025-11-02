@@ -42,9 +42,9 @@ class CharacterTransfer(BaseModel):
         blank=True
     )
     
-    # Valores
-    price = models.DecimalField(_("Preço"), max_digits=10, decimal_places=2)
-    currency = models.CharField(_("Moeda"), max_length=10, choices=CURRENCY_CHOICES, default='BRL')
+    # Valores (sempre em BRL - integrado com sistema de wallet)
+    price = models.DecimalField(_("Preço (R$)"), max_digits=10, decimal_places=2)
+    currency = models.CharField(_("Moeda"), max_length=10, choices=CURRENCY_CHOICES, default='BRL', editable=False)
     
     # Status e informações
     status = models.CharField(_("Status"), max_length=20, choices=TRANSFER_STATUS_CHOICES, default='pending')
