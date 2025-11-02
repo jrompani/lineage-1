@@ -1,0 +1,137 @@
+{% extends "layouts/base.html" %}
+{% load i18n static l10n %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'marketplace/css/marketplace.css' %}?v=1.0">
+{% endblock %}
+
+{% block content %}
+<div class="reports-container">
+  <div class="container">
+    <!-- Header Compacto -->
+    <div class="marketplace-header">
+      <div class="marketplace-header-icon">
+        <i class="fas fa-tags"></i>
+      </div>
+      <h1 class="marketplace-title">{% trans "Minhas Vendas" %}</h1>
+      <p class="marketplace-subtitle">
+        <i class="fas fa-store-alt me-2"></i>{% trans "Personagens que você está vendendo no marketplace" %}
+      </p>
+    </div>
+
+    <!-- Breadcrumbs -->
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'dashboard' %}">{% trans "Dashboard" %}</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'marketplace:list' %}">{% trans "Marketplace" %}</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">{% trans "Minhas Vendas" %}</li>
+      </ol>
+    </nav>
+
+    <!-- Sales List -->
+    <div class="reports-card">
+      <div class="reports-card-header">
+        <i class="fas fa-tag reports-icon"></i>
+        <h2 class="reports-card-title">{% trans "Seus Personagens" %}</h2>
+        <p class="reports-card-description">{% trans "Histórico de vendas" %}</p>
+      </div>
+      <div class="reports-card-body">
+        {% if sales %}
+        <div class="marketplace-grid">
+          {% for sale in sales %}
+          <div class="character-card">
+            <!-- Header -->
+            <div class="character-card-header">
+              <div class="character-badge">
+                <span class="character-level">LVL {{ sale.char_level }}</span>
+                <span class="character-class">{{ sale.class_name }}</span>
+              </div>
+              <span class="status-badge status-{{ sale.status }}">
+                {{ sale.get_status_display }}
+              </span>
+            </div>
+
+            <!-- Info -->
+            <div class="character-info">
+              <h3 class="character-name">{{ sale.char_name }}</h3>
+              
+              <div class="purchase-detail-info">
+                {% if sale.buyer %}
+                <div class="info-row">
+                  <i class="fas fa-user-check text-success me-2"></i>
+                  <span class="info-label">{% trans "Comprador" %}:</span>
+                  <span class="info-value">{{ sale.buyer.username }}</span>
+                </div>
+                {% endif %}
+                <div class="info-row">
+                  <i class="fas fa-calendar text-info me-2"></i>
+                  <span class="info-label">{% trans "Listado em" %}:</span>
+                  <span class="info-value">{{ sale.listed_at|date:"d/m/Y H:i" }}</span>
+                </div>
+                {% if sale.sold_at %}
+                <div class="info-row">
+                  <i class="fas fa-check text-success me-2"></i>
+                  <span class="info-label">{% trans "Vendido em" %}:</span>
+                  <span class="info-value">{{ sale.sold_at|date:"d/m/Y H:i" }}</span>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Price -->
+            <div class="character-price">
+              <span class="price-label">{% trans "Preço" %}</span>
+              <div class="price-value">
+                <span class="currency">R$</span>
+                <span class="amount">{{ sale.price }}</span>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="character-actions">
+              <a href="{% url 'marketplace:character_detail' sale.id %}" class="btn btn-primary btn-block mb-2">
+                <i class="fas fa-eye me-2"></i>{% trans "Ver Detalhes" %}
+              </a>
+              {% if sale.status == 'for_sale' %}
+              <form method="post" action="{% url 'marketplace:cancel' sale.id %}" 
+                    onsubmit="return confirm('{% trans 'Deseja realmente cancelar esta venda?' %}');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-block">
+                  <i class="fas fa-times-circle me-2"></i>{% trans "Cancelar Venda" %}
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <i class="fas fa-inbox fa-3x mb-3"></i>
+          <p>{% trans "Você ainda não colocou nenhum personagem à venda." %}</p>
+          <a href="{% url 'marketplace:sell' %}" class="btn btn-primary mt-3">
+            <i class="fas fa-plus-circle me-2"></i>{% trans "Vender Personagem" %}
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Return Button -->
+    <div class="text-center mt-4">
+      <a href="{% url 'marketplace:list' %}" class="report-back-button">
+        <i class="fas fa-arrow-left me-2"></i>{% trans "Voltar ao Marketplace" %}
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extrajs %}
+<script src="{% static 'marketplace/js/marketplace.js' %}?v=1.0"></script>
+{% endblock %}
+

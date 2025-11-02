@@ -394,37 +394,6 @@ class LineageStats:
         """
         return LineageStats._run_query(sql, {"boss_jewel_ids": tuple(boss_jewel_ids)})
 
-    @staticmethod
-    @cache_lineage_result(timeout=300)
-    def top_agathions(limit=10):
-        sql = """
-            SELECT 
-                C.char_name, 
-                C.online, 
-                C.onlinetime,
-                CS.level,
-                CS.class_id AS base,
-                D.name AS clan_name,
-                C.clanid AS clan_id,
-                CD.ally_id AS ally_id,
-                A.name AS agathion_name,
-                A.level AS agathion_level,
-                A.exp AS agathion_exp,
-                A.item_id AS agathion_item_id,
-                A.status AS agathion_status
-            FROM characters C
-            LEFT JOIN character_subclasses CS ON CS.charId = C.charId AND CS.class_index = 0
-            LEFT JOIN clan_subpledges D ON D.clan_id = C.clanid AND D.sub_pledge_id = 0
-            LEFT JOIN clan_data CD ON CD.clan_id = C.clanid
-            INNER JOIN agathion_data A ON A.owner_id = C.charId
-            WHERE C.accessLevel = '0' 
-                AND A.level IS NOT NULL 
-                AND A.status IN ('active', 'stored')
-            ORDER BY A.level DESC, A.exp DESC, CS.level DESC, C.char_name ASC
-            LIMIT :limit
-        """
-        return LineageStats._run_query(sql, {"limit": limit})
-
 
 class LineageServices:
 
@@ -927,3 +896,148 @@ class TransferFromCharToWallet:
         except Exception as e:
             print(f"Erro ao remover coin do inventário/warehouse: {e}")
             return False
+
+
+class LineageMarketplace:
+    
+    @staticmethod
+    @cache_lineage_result(timeout=300, use_cache=False)
+    def get_user_characters(account_name):
+        """
+        Busca todos os characters de uma conta do banco L2.
+        Retorna apenas dados das tabelas originais do Lineage 2.
+        """
+        sql = """
+            SELECT 
+                c.charId as char_id,
+                c.char_name,
+                c.level,
+                c.classid,
+                c.pvpkills as pvp_kills,
+                c.pkkills as pk_count,
+                c.clanid,
+                COALESCE(cl.clan_name, '') as clan_name,
+                c.accesslevel,
+                c.online,
+                c.lastAccess,
+                c.account_name
+            FROM characters c
+            LEFT JOIN clan_data cl ON c.clanid = cl.clan_id
+            WHERE c.account_name = :account_name
+            ORDER BY c.level DESC, c.char_name ASC
+        """
+        return LineageDB().select(sql, {"account_name": account_name})
+    
+    @staticmethod
+    @cache_lineage_result(timeout=300, use_cache=False)
+    def verify_character_ownership(char_id, account_name):
+        """
+        Verifica se um character pertence a uma conta específica.
+        """
+        sql = """
+            SELECT COUNT(*) as total
+            FROM characters 
+            WHERE charId = :char_id AND account_name = :account_name
+        """
+        result = LineageDB().select(sql, {"char_id": char_id, "account_name": account_name})
+        return result[0]['total'] > 0 if result and len(result) > 0 else False
+    
+    @staticmethod
+    @cache_lineage_result(timeout=300, use_cache=False)
+    def get_character_details(char_id):
+        """
+        Busca detalhes completos de um character do banco L2.
+        """
+        sql = """
+            SELECT 
+                c.charId as char_id,
+                c.char_name,
+                c.level,
+                c.classid,
+                c.pvpkills as pvp_kills,
+                c.pkkills as pk_count,
+                c.clanid,
+                COALESCE(cl.clan_name, '') as clan_name,
+                c.accesslevel,
+                c.online,
+                c.lastAccess,
+                c.account_name
+            FROM characters c
+            LEFT JOIN clan_data cl ON c.clanid = cl.clan_id
+            WHERE c.charId = :char_id
+        """
+        result = LineageDB().select(sql, {"char_id": char_id})
+        return result[0] if result and len(result) > 0 else None
+    
+    @staticmethod
+    @cache_lineage_result(timeout=300, use_cache=False)
+    def get_character_items_count(char_id):
+        """
+        Conta quantos itens um character possui no banco L2.
+        """
+        sql = """
+            SELECT COUNT(*) as total_items
+            FROM items 
+            WHERE owner_id = :char_id
+            AND (loc = 'INVENTORY' OR loc = 'PAPERDOLL')
+        """
+        result = LineageDB().select(sql, {"char_id": char_id})
+        return result[0]['total_items'] if result and len(result) > 0 else 0
+    
+    @staticmethod
+    @cache_lineage_result(timeout=300, use_cache=False)
+    def get_character_items(char_id):
+        """
+        Busca todos os itens de um character do banco L2.
+        Retorna dict com 'inventory' e 'equipment'.
+        """
+        sql = """
+            SELECT 
+                i.object_id,
+                i.item_id,
+                i.count,
+                i.enchant_level,
+                i.loc,
+                i.loc_data,
+                COALESCE(it.name, 'Item Desconhecido') as item_name,
+                it.icon,
+                it.item_type,
+                it.crystal_type
+            FROM items i
+            LEFT JOIN item_templates it ON i.item_id = it.item_id
+            WHERE i.owner_id = :char_id
+            AND (i.loc = 'INVENTORY' OR i.loc = 'PAPERDOLL')
+            ORDER BY i.loc, i.loc_data
+        """
+        result = LineageDB().select(sql, {"char_id": char_id})
+        
+        if result is None:
+            return {'inventory': [], 'equipment': []}
+        
+        inventory_items = []
+        equipment_items = []
+        
+        for item_data in result:
+            if item_data['loc'] == 'INVENTORY':
+                inventory_items.append(item_data)
+            elif item_data['loc'] == 'PAPERDOLL':
+                equipment_items.append(item_data)
+        
+        return {
+            'inventory': inventory_items,
+            'equipment': equipment_items
+        }
+    
+    @staticmethod
+    @cache_lineage_result(timeout=300, use_cache=False)
+    def transfer_character_to_account(char_id, new_account):
+        """
+        Transfere um character para nova conta no banco L2.
+        Altera o campo account_name na tabela characters.
+        
+        IMPORTANTE: Esta operação modifica dados críticos do jogo.
+        Deve ser usado apenas após validação completa da transação.
+        """
+        sql = "UPDATE characters SET account_name = :new_account WHERE charId = :char_id"
+        result = LineageDB().update(sql, {"new_account": new_account, "char_id": char_id})
+        return result is not None and result > 0

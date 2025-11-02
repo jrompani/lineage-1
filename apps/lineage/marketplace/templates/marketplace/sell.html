@@ -1,0 +1,217 @@
+{% extends "layouts/base.html" %}
+{% load i18n static l10n %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'marketplace/css/marketplace.css' %}?v=1.0">
+{% endblock %}
+
+{% block content %}
+<div class="reports-container">
+  <div class="container">
+    <!-- Header -->
+    <div class="reports-header">
+      <h1 class="reports-title">
+        <i class="fas fa-plus-circle me-3"></i>{% trans "Vender Personagem" %}
+      </h1>
+      <p class="reports-subtitle">
+        {% trans "Liste seu personagem no marketplace" %}
+      </p>
+    </div>
+
+    <!-- Breadcrumbs -->
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'dashboard' %}">{% trans "Dashboard" %}</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'marketplace:list' %}">{% trans "Marketplace" %}</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">{% trans "Vender" %}</li>
+      </ol>
+    </nav>
+
+    <!-- Sell Form -->
+    <div class="reports-card">
+      <div class="reports-card-header">
+        <i class="fas fa-edit reports-icon"></i>
+        <h2 class="reports-card-title">{% trans "Informações da Venda" %}</h2>
+        <p class="reports-card-description">{% trans "Preencha os dados para listar seu personagem" %}</p>
+      </div>
+      <div class="reports-card-body">
+        {% if not characters %}
+        <div class="empty-state">
+          <i class="fas fa-user-slash fa-3x mb-3"></i>
+          <p>{% trans "Você não possui personagens disponíveis para venda no momento." %}</p>
+          <p class="small text-muted">
+            {% trans "Isso pode acontecer se:" %}<br>
+            • {% trans "Você não tem personagens no jogo" %}<br>
+            • {% trans "Todos seus personagens já estão listados para venda" %}<br>
+            • {% trans "Seus personagens são Game Masters (GMs não podem ser vendidos)" %}<br>
+            • {% trans "O banco do jogo está temporariamente indisponível" %}
+          </p>
+          <a href="{% url 'marketplace:list' %}" class="btn btn-primary mt-3">
+            <i class="fas fa-arrow-left me-2"></i>{% trans "Voltar ao Marketplace" %}
+          </a>
+        </div>
+        {% else %}
+        <form method="post" id="sellForm">
+          {% csrf_token %}
+          
+          <div class="form-section">
+            <h4><i class="fas fa-user me-2"></i>{% trans "Selecione o Personagem" %}</h4>
+            
+            <div class="form-group">
+              <label for="character_select">{% trans "Personagem" %} *</label>
+              <select class="form-control" id="character_select" name="char_id" required>
+                <option value="">{% trans "Selecione um personagem" %}</option>
+                {% if characters %}
+                  {% for char in characters %}
+                  <option value="{{ char.char_id }}" 
+                          data-level="{{ char.level }}" 
+                          data-class="{{ char.classid }}"
+                          data-pvp="{{ char.pvp_kills|default:0 }}"
+                          data-pk="{{ char.pk_count|default:0 }}"
+                          data-clan="{{ char.clan_name|default:'' }}">
+                    {{ char.char_name }} - Lv. {{ char.level }} {% if char.clan_name %}({{ char.clan_name }}){% endif %}
+                  </option>
+                  {% endfor %}
+                {% else %}
+                  <option value="" disabled>{% trans "Nenhum personagem disponível" %}</option>
+                {% endif %}
+              </select>
+              <small class="form-text text-muted">
+                {% trans "Selecione qual personagem deseja vender" %}
+              </small>
+            </div>
+
+            <div id="character_preview" class="character-preview" style="display:none;">
+              <!-- Character details will be shown here -->
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4><i class="fas fa-dollar-sign me-2"></i>{% trans "Preço" %}</h4>
+            
+            <div class="form-group">
+              <label for="price">{% trans "Preço em Reais (R$)" %} *</label>
+              <div class="input-group">
+                <span class="input-group-text" style="background: rgba(111, 66, 193, 0.2); border: 2px solid rgba(111, 66, 193, 0.4); color: #0dcaf0; font-family: 'Orbitron', sans-serif; font-weight: 700;">
+                  R$
+                </span>
+                <input type="number" class="form-control" id="price" name="price" 
+                       min="1" step="0.01" placeholder="0.00" required>
+              </div>
+              <small class="form-text text-muted">
+                {% trans "O valor será debitado/creditado na carteira (wallet) do comprador/vendedor" %}
+              </small>
+              <input type="hidden" name="currency" value="BRL">
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4><i class="fas fa-sticky-note me-2"></i>{% trans "Observações" %}</h4>
+            
+            <div class="form-group">
+              <label for="notes">{% trans "Observações" %} ({% trans "Opcional" %})</label>
+              <textarea class="form-control" id="notes" name="notes" rows="4" 
+                        placeholder="{% trans 'Adicione informações adicionais sobre o personagem (itens especiais, conquistas, etc.)' %}"></textarea>
+              <small class="form-text text-muted">
+                {% trans "Máximo 500 caracteres" %}
+              </small>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-success btn-lg">
+              <i class="fas fa-check-circle me-2"></i>{% trans "Listar Personagem" %}
+            </button>
+            <a href="{% url 'marketplace:list' %}" class="btn btn-secondary btn-lg">
+              <i class="fas fa-times me-2"></i>{% trans "Cancelar" %}
+            </a>
+          </div>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Return Button -->
+    <div class="text-center mt-4">
+      <a href="{% url 'marketplace:list' %}" class="report-back-button">
+        <i class="fas fa-arrow-left me-2"></i>{% trans "Voltar ao Marketplace" %}
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extrajs %}
+<script src="{% static 'marketplace/js/marketplace.js' %}?v=1.0"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const characterSelect = document.getElementById('character_select');
+    const characterPreview = document.getElementById('character_preview');
+    
+    if (characterSelect) {
+      characterSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        
+        if (this.value) {
+          const charData = {
+            name: selectedOption.text.split(' - ')[0],
+            level: selectedOption.dataset.level,
+            classId: selectedOption.dataset.class,
+            pvp: selectedOption.dataset.pvp,
+            pk: selectedOption.dataset.pk,
+            clan: selectedOption.dataset.clan
+          };
+          
+          showCharacterPreview(charData);
+        } else {
+          characterPreview.style.display = 'none';
+        }
+      });
+    }
+    
+    function showCharacterPreview(char) {
+      characterPreview.style.display = 'block';
+      characterPreview.innerHTML = `
+        <div class="character-preview-content" style="text-align: center;">
+          <i class="fas fa-user-shield fa-3x mb-3" style="color: #0dcaf0; text-shadow: 0 0 25px rgba(13, 202, 240, 0.9);"></i>
+          <h5 style="color: #fff; font-family: 'Orbitron', sans-serif; margin-bottom: 1.5rem; text-transform: uppercase;">
+            ✨ ${char.name}
+          </h5>
+          <div class="row text-center" style="color: #e0e0e0; font-family: 'Orbitron', sans-serif;">
+            <div class="col-6 mb-3">
+              <div style="background: rgba(111, 66, 193, 0.2); padding: 1rem; border-radius: 10px; border: 1px solid rgba(111, 66, 193, 0.4);">
+                <i class="fas fa-level-up-alt" style="color: #10b981; text-shadow: 0 0 10px rgba(16, 185, 129, 0.8);"></i>
+                <div style="margin-top: 0.5rem;">Level: <strong style="color: #10b981;">${char.level}</strong></div>
+              </div>
+            </div>
+            <div class="col-6 mb-3">
+              <div style="background: rgba(111, 66, 193, 0.2); padding: 1rem; border-radius: 10px; border: 1px solid rgba(111, 66, 193, 0.4);">
+                <i class="fas fa-sword" style="color: #0dcaf0; text-shadow: 0 0 10px rgba(13, 202, 240, 0.8);"></i>
+                <div style="margin-top: 0.5rem;">PvP: <strong style="color: #0dcaf0;">${char.pvp}</strong></div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div style="background: rgba(111, 66, 193, 0.2); padding: 1rem; border-radius: 10px; border: 1px solid rgba(111, 66, 193, 0.4);">
+                <i class="fas fa-skull" style="color: #e83e8c; text-shadow: 0 0 10px rgba(232, 62, 140, 0.8);"></i>
+                <div style="margin-top: 0.5rem;">PK: <strong style="color: #e83e8c;">${char.pk}</strong></div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div style="background: rgba(111, 66, 193, 0.2); padding: 1rem; border-radius: 10px; border: 1px solid rgba(111, 66, 193, 0.4);">
+                <i class="fas fa-shield-alt" style="color: #f59e0b; text-shadow: 0 0 10px rgba(245, 158, 11, 0.8);"></i>
+                <div style="margin-top: 0.5rem;">Clan: <strong style="color: #f59e0b;">${char.clan || 'Nenhum'}</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      characterPreview.style.animation = 'popIn 0.4s ease-out';
+    }
+  });
+</script>
+{% endblock %}
+

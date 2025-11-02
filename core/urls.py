@@ -84,6 +84,7 @@ lineage_patterns = [
     path("accountancy/", include("apps.lineage.accountancy.urls")),
     path("inventory/", include("apps.lineage.inventory.urls")),
     path("shop/", include("apps.lineage.shop.urls")),
+    path("marketplace/", include("apps.lineage.marketplace.urls")),
     path("auction/", include("apps.lineage.auction.urls")),
     path("game/", include("apps.lineage.games.urls")),
     path("report/", include("apps.lineage.reports.urls")),
