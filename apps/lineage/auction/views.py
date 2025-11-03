@@ -112,7 +112,7 @@ def fazer_lance(request, auction_id):
             with transaction.atomic():
                 place_bid(auction, request.user, bid_amount, character_name)
 
-            perfil = PerfilGamer.objects.get(user=request.user)
+            perfil, created = PerfilGamer.objects.get_or_create(user=request.user)
             perfil.adicionar_xp(40)
 
             messages.success(request, _('Lance efetuado com sucesso!'))

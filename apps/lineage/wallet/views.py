@@ -177,7 +177,7 @@ def transfer_to_server(request):
             messages.error(request, f"Ocorreu um erro durante a transferência: {str(e)}")
             return redirect('wallet:dashboard')
 
-        perfil = PerfilGamer.objects.get(user=request.user)
+        perfil, created = PerfilGamer.objects.get_or_create(user=request.user)
         perfil.adicionar_xp(40)
 
         if origem_saldo == 'bonus':

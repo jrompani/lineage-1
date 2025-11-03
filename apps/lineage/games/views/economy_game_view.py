@@ -13,7 +13,7 @@ from ..models import EconomyWeapon, Monster, Bag, BagItem, RewardItem, Item
 
 def add_reward_to_bag(user, item_id, item_name, enchant=0, quantity=1):
     # Pega a bag do usuário (supondo que tenha um método assim)
-    bag = Bag.objects.get(user=user)
+    bag, created = Bag.objects.get_or_create(user=user)
 
     bag_item, created = BagItem.objects.get_or_create(
         bag=bag,
@@ -53,7 +53,7 @@ def economy_game(request):
 @conditional_otp_required
 def fight_monster(request, monster_id):
     monster = get_object_or_404(Monster, id=monster_id)
-    weapon = EconomyWeapon.objects.get(user=request.user)
+    weapon, created = EconomyWeapon.objects.get_or_create(user=request.user)
 
     if not monster.is_alive:
         messages.error(request, "Esse monstro ainda está se regenerando! Aguarde o respawn.")
@@ -120,7 +120,7 @@ def fight_monster(request, monster_id):
 
 @conditional_otp_required
 def enchant_weapon(request):
-    weapon = EconomyWeapon.objects.get(user=request.user)
+    weapon, created = EconomyWeapon.objects.get_or_create(user=request.user)
 
     if weapon.fragments < 10:
         messages.error(request, "Você precisa de pelo menos 10 fragmentos para tentar encantar.")

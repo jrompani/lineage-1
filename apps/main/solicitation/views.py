@@ -90,7 +90,7 @@ class SolicitationCreateView(LoginRequiredMixin, CreateView):
         form.instance.user = self.request.user
         response = super().form_valid(form)
 
-        perfil = PerfilGamer.objects.get(user=self.request.user)
+        perfil, created = PerfilGamer.objects.get_or_create(user=self.request.user)
         perfil.adicionar_xp(50)
 
         try:
