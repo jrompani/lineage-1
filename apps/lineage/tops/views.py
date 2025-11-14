@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.views.generic import TemplateView
 from django.utils.translation import gettext_lazy as _
 from apps.lineage.server.utils.crest import attach_crests_to_clans
+from apps.lineage.server.utils.bosses import enrich_grandboss_status
 from apps.lineage.server.database import LineageDB
 from apps.lineage.server.models import ActiveAdenaExchangeItem
 from datetime import datetime
@@ -356,6 +357,45 @@ class TopsOlympiadView(TopsBaseView):
     
     def get_title(self):
         return _('Ranking Olimpíada')
+
+
+class TopsGrandBossView(TopsBaseView):
+    template_name = 'tops/grandboss.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        db = LineageDB()
+
+        if not db.is_connected():
+            context['bosses'] = []
+            context['alive_count'] = 0
+            context['dead_count'] = 0
+            return context
+
+        raw_bosses = LineageStats.grandboss_status()
+        bosses = enrich_grandboss_status(raw_bosses)
+
+        alive = [boss for boss in bosses if boss.get('is_alive')]
+        dead = [boss for boss in bosses if boss.get('is_alive') is False]
+        unknown = [boss for boss in bosses if boss.get('is_alive') not in (True, False)]
+
+        def sort_dead(item):
+            respawn = item.get('respawn_seconds')
+            return respawn if respawn is not None else float('inf')
+
+        dead.sort(key=sort_dead)
+        alive.sort(key=lambda item: item.get('name') or '')
+        unknown.sort(key=lambda item: item.get('name') or '')
+
+        ordered = dead + alive + unknown
+
+        context['bosses'] = ordered
+        context['alive_count'] = len(alive)
+        context['dead_count'] = len(dead)
+        return context
+
+    def get_title(self):
+        return _('Grand Boss Status')
 
 
 class TopsSiegeView(TopsBaseView):

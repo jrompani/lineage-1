@@ -301,6 +301,35 @@ class LineageStats:
 
     @staticmethod
     @cache_lineage_result(timeout=300)
+    def raidboss_status():
+        sql = """
+            SELECT 
+                B.boss_id,
+                B.respawn_time AS respawn,
+                CASE 
+                    WHEN B.respawn_time IS NULL OR B.respawn_time = 0 THEN 'Alive'
+                    WHEN (
+                        (B.respawn_time > 9999999999 AND B.respawn_time > UNIX_TIMESTAMP() * 1000) OR
+                        (B.respawn_time <= 9999999999 AND B.respawn_time > UNIX_TIMESTAMP())
+                    ) THEN 'Dead'
+                    ELSE 'Alive'
+                END AS status,
+                CASE 
+                    WHEN B.respawn_time IS NULL OR B.respawn_time = 0 THEN NULL
+                    WHEN B.respawn_time > 9999999999 THEN FROM_UNIXTIME(B.respawn_time / 1000)
+                    ELSE FROM_UNIXTIME(B.respawn_time)
+                END AS respawn_human,
+                NULL AS last_kill,
+                N.name,
+                N.level
+            FROM raidboss_spawnlist B
+            LEFT JOIN site_bosses N ON N.id = B.boss_id
+            ORDER BY respawn DESC, level DESC, name ASC
+        """
+        return LineageStats._run_query(sql)
+
+    @staticmethod
+    @cache_lineage_result(timeout=300)
     def siege():
         sql = """
             SELECT 

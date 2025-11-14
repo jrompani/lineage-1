@@ -328,6 +328,12 @@
                 <span class="sidebar-text">{% trans "Top Clans" %}</span>
               </a>
             </li>
+
+            <li class="nav-item {% if 'top-grandboss' in segment %}active{% endif %}">
+              <a class="nav-link" href="{% url 'server:top_grandboss' %}">
+                <span class="sidebar-text">{% trans "Top Grand Boss" %}</span>
+              </a>
+            </li>
             
             <li class="nav-item {% if 'top-clans' in segment %}active{% endif %}">
               <a class="nav-link" href="{% url 'server:top_online' %}">

@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from apps.main.home.decorator import conditional_otp_required
 from apps.lineage.server.utils.crest import attach_crests_to_clans
+from apps.lineage.server.utils.bosses import enrich_grandboss_status
 from apps.lineage.server.database import LineageDB
 from ..models import ActiveAdenaExchangeItem
 
@@ -67,3 +68,36 @@ def top_online_view(request):
     result = LineageStats.top_online(limit=20) if db.is_connected() else []
     result = attach_crests_to_clans(result)
     return render(request, 'tops/top_online.html', {"ranking": result})
+
+
+@conditional_otp_required
+def top_grandboss_view(request):
+    db = LineageDB()
+
+    if not db.is_connected():
+        bosses = []
+    else:
+        raw_bosses = LineageStats.grandboss_status()
+        bosses = enrich_grandboss_status(raw_bosses)
+
+        dead = [boss for boss in bosses if boss.get('is_alive') is False]
+        alive = [boss for boss in bosses if boss.get('is_alive')]
+        unknown = [boss for boss in bosses if boss.get('is_alive') not in (True, False)]
+
+        def sort_dead(item):
+            respawn = item.get('respawn_seconds')
+            return respawn if respawn is not None else float('inf')
+
+        dead.sort(key=sort_dead)
+        alive.sort(key=lambda item: item.get('name') or '')
+        unknown.sort(key=lambda item: item.get('name') or '')
+
+        bosses = dead + alive + unknown
+
+    context = {
+        'bosses': bosses,
+        'alive_count': sum(1 for boss in bosses if boss.get('is_alive')),
+        'dead_count': sum(1 for boss in bosses if boss.get('is_alive') is False),
+    }
+
+    return render(request, 'tops/top_grandboss.html', context)

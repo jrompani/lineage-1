@@ -1,0 +1,143 @@
+{% extends "layouts/base.html" %}
+{% load i18n %}
+
+{% block extrastyle %}
+<style>
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+  }
+
+  .status-chip.alive {
+    background: rgba(76, 175, 80, 0.2);
+    color: #2e7d32;
+  }
+
+  .status-chip.dead {
+    background: rgba(229, 57, 53, 0.2);
+    color: #c62828;
+  }
+
+  .status-chip.unknown {
+    background: rgba(96, 125, 139, 0.2);
+    color: #455a64;
+  }
+
+  .grandboss-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 18px;
+    margin-bottom: 28px;
+  }
+
+  .metric-card {
+    border-radius: 14px;
+    padding: 18px;
+    background: linear-gradient(135deg, rgba(230, 199, 125, 0.18), rgba(155, 117, 48, 0.3));
+    border: 1px solid rgba(230, 199, 125, 0.35);
+    text-align: center;
+  }
+
+  .metric-card span {
+    display: block;
+  }
+
+  .metric-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: rgba(0, 0, 0, 0.55);
+  }
+
+  .metric-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #2c1c07;
+  }
+
+  .metric-card.alive {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.15), rgba(27, 94, 32, 0.25));
+    border-color: rgba(76, 175, 80, 0.3);
+  }
+
+  .metric-card.dead {
+    background: linear-gradient(135deg, rgba(229, 57, 53, 0.15), rgba(183, 28, 28, 0.25));
+    border-color: rgba(229, 57, 53, 0.3);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow-lg p-4">
+    <h2 class="text-center mb-4">{% trans "Grand Boss Status" %}</h2>
+
+    <div class="grandboss-metrics">
+      <div class="metric-card">
+        <span class="metric-label">{% trans "Total" %}</span>
+        <span class="metric-value">{{ bosses|length }}</span>
+      </div>
+      <div class="metric-card alive">
+        <span class="metric-label">{% trans "Disponíveis" %}</span>
+        <span class="metric-value">{{ alive_count }}</span>
+      </div>
+      <div class="metric-card dead">
+        <span class="metric-label">{% trans "Em Respawn" %}</span>
+        <span class="metric-value">{{ dead_count }}</span>
+      </div>
+    </div>
+
+    {% if bosses %}
+    <div class="table-responsive-md">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>{% trans "Nome" %}</th>
+            <th class="d-none d-md-table-cell">{% trans "Nível" %}</th>
+            <th>{% trans "Status" %}</th>
+            <th class="d-none d-md-table-cell">{% trans "Respawn" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for boss in bosses %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ boss.name }}</td>
+            <td class="d-none d-md-table-cell">{{ boss.level }}</td>
+            <td>
+              {% if boss.is_alive %}
+                <span class="status-chip alive"><i class="fas fa-heartbeat"></i> {% trans "Disponível" %}</span>
+              {% elif boss.is_alive is False %}
+                <span class="status-chip dead"><i class="fas fa-skull-crossbones"></i> {% trans "Morto" %}</span>
+              {% else %}
+                <span class="status-chip unknown"><i class="fas fa-question-circle"></i> {% trans "Desconhecido" %}</span>
+              {% endif %}
+            </td>
+            <td class="d-none d-md-table-cell">
+              {% if boss.is_alive %}
+                -
+              {% else %}
+                {{ boss.respawn_human }}
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="alert alert-warning text-center">
+      {% trans "Nenhum boss encontrado." %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+

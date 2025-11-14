@@ -12,7 +12,7 @@
             <p class="hero-subtitle">{% trans "Descubra os melhores jogadores e clãs que dominam nosso mundo" %}</p>
             <div class="hero-stats">
                 <div class="stat-item">
-                    <span class="stat-number">7</span>
+                    <span class="stat-number">9</span>
                     <span class="stat-label">{% trans "Categorias" %}</span>
                 </div>
                 <div class="stat-item">
@@ -168,8 +168,27 @@
                 </a>
             </div>
 
-            <!-- Castle & Siege -->
+            <!-- Grand Boss Status -->
             <div class="category-card" data-aos="zoom-in" data-aos-duration="800" data-aos-delay="800">
+                <a href="{% url 'tops:grandboss' %}" class="category-link">
+                    <div class="category-icon grandboss-icon">
+                        <i class="fas fa-dragon"></i>
+                    </div>
+                    <div class="category-content">
+                        <h3 class="category-title">{% trans "Grand Boss Status" %}</h3>
+                        <p class="category-description">{% trans "Monitore os chefes lendários do servidor" %}</p>
+                        <div class="category-meta">
+                            <span class="category-badge grandboss-badge">{% trans "Boss" %}</span>
+                        </div>
+                    </div>
+                    <div class="category-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Castle & Siege -->
+            <div class="category-card" data-aos="zoom-in" data-aos-duration="800" data-aos-delay="900">
                 <a href="{% url 'tops:siege' %}" class="category-link">
                     <div class="category-icon siege-icon">
                         <i class="fas fa-chess-rook"></i>
@@ -434,6 +453,15 @@
     color: #ffc107;
 }
 
+.grandboss-icon {
+    background: linear-gradient(135deg, rgba(233, 30, 99, 0.2), rgba(194, 24, 91, 0.2));
+    border-color: rgba(233, 30, 99, 0.3);
+}
+
+.grandboss-icon i {
+    color: #e91e63;
+}
+
 .siege-icon {
     background: linear-gradient(135deg, rgba(111, 66, 193, 0.2), rgba(88, 53, 153, 0.2));
     border-color: rgba(111, 66, 193, 0.3);
@@ -513,6 +541,12 @@
     background: rgba(255, 193, 7, 0.1);
     color: #ffc107;
     border-color: rgba(255, 193, 7, 0.2);
+}
+
+.grandboss-badge {
+    background: rgba(233, 30, 99, 0.1);
+    color: #e91e63;
+    border-color: rgba(233, 30, 99, 0.2);
 }
 
 .siege-badge {

@@ -15,6 +15,7 @@ urlpatterns = [
     path('status/top-clans/', top_clans_view, name='top_clans'),
     path('status/top-level/', top_level_view, name='top_level'),
     path("status/top-online/", top_online_view, name="top_online"),
+    path("status/top-grandboss/", top_grandboss_view, name="top_grandboss"),
     path("status/siege-ranking/", siege_ranking_view, name="siege_ranking"),
     path('status/olympiad-ranking/', olympiad_ranking_view, name='olympiad_ranking'),
     path('status/olympiad-all-heroes/', olympiad_all_heroes_view, name='olympiad_all_heroes'),
