@@ -2,12 +2,14 @@ from django.shortcuts import render
 from apps.main.home.decorator import conditional_otp_required
 from django.utils.translation import gettext as _
 
-import json, os, time
+import json
+import os
+from datetime import datetime
 from django.conf import settings
 
-from datetime import datetime, timedelta
 from apps.lineage.server.database import LineageDB
 from apps.lineage.server.utils.crest import attach_crests_to_clans
+from apps.lineage.server.utils.bosses import enrich_grandboss_status
 from utils.resources import get_class_name
 
 from utils.dynamic_import import get_query_class  # importa o helper
@@ -206,57 +208,10 @@ def boss_jewel_locations_view(request):
 def grandboss_status_view(request):
 
     db = LineageDB()
-    if db.is_connected():
-
-        grandboss_status = LineageStats.grandboss_status()
-
-        # Carregar o JSON de bosses
-        bosses_path = os.path.join(settings.BASE_DIR, 'utils/data/bosses.json')
-        with open(bosses_path, 'r', encoding='utf-8') as f:
-            bosses_data = json.load(f)
-
-        bosses_index = {str(boss['id']): boss for boss in bosses_data['data']}
-
-        # Enriquecer os dados
-        for boss in grandboss_status:
-            boss_id_str = str(boss['boss_id'])
-            boss_info = bosses_index.get(boss_id_str, {"name": "Desconhecido", "level": "-"})
-
-            boss['name'] = boss_info['name']
-            boss['level'] = boss_info['level']
-
-            respawn_timestamp = boss.get('respawn')
-            gmt_offset = int(getattr(settings, 'GMT_OFFSET', 0))
-            current_time = time.time()
-
-            # Validar tipo e converter se necessário
-            if isinstance(respawn_timestamp, (int, float)):
-                if respawn_timestamp > 1e12:
-                    # Está em milissegundos, converte para segundos
-                    respawn_timestamp /= 1000
-
-                if respawn_timestamp > current_time:
-                    try:
-                        respawn_datetime = datetime.fromtimestamp(respawn_timestamp) - timedelta(hours=gmt_offset)
-                        
-                        # Usar configuração para decidir se mostra data e hora ou apenas data
-                        if getattr(settings, 'GRANDBOSS_SHOW_TIME', True):
-                            boss['respawn_human'] = respawn_datetime.strftime('%d/%m/%Y %H:%M')
-                        else:
-                            boss['respawn_human'] = respawn_datetime.strftime('%d/%m/%Y')
-                        
-                        boss['status'] = "Morto"
-                    except (OSError, OverflowError, ValueError) as e:
-                        boss['status'] = "Desconhecido"
-                        boss['respawn_human'] = f"Erro: {str(e)}"
-                else:
-                    boss['status'] = "Vivo"
-                    boss['respawn_human'] = '-'
-            else:
-                boss['status'] = "Desconhecido"
-                boss['respawn_human'] = 'Timestamp inválido'
-
+    if not db.is_connected():
+        grandboss_status = []
     else:
-        grandboss_status = list()
+        raw_data = LineageStats.grandboss_status()
+        grandboss_status = enrich_grandboss_status(raw_data)
 
     return render(request, 'status/grandboss_status.html', {'bosses': grandboss_status})

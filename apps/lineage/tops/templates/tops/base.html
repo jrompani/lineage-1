@@ -54,6 +54,16 @@
                     </a>
                 </li>
                 <li class="tops-nav-item">
+                    <a href="{% url 'tops:grandboss' %}" {% if request.resolver_match.url_name == 'grandboss' %}class="tops-nav-link active"{% else %}class="tops-nav-link"{% endif %}>
+                        <i class="fas fa-crown"></i>{% trans "Grand Boss Status" %}
+                    </a>
+                </li>
+                <li class="tops-nav-item">
+                    <a href="{% url 'tops:raidboss' %}" {% if request.resolver_match.url_name == 'raidboss' %}class="tops-nav-link active"{% else %}class="tops-nav-link"{% endif %}>
+                        <i class="fas fa-dragon"></i>{% trans "Raid Boss Status" %}
+                    </a>
+                </li>
+                <li class="tops-nav-item">
                     <a href="{% url 'tops:siege' %}" {% if request.resolver_match.url_name == 'siege' %}class="tops-nav-link active"{% else %}class="tops-nav-link"{% endif %}>
                         <i class="fas fa-chess-rook"></i>{% trans "Castle & Siege" %}
                     </a>

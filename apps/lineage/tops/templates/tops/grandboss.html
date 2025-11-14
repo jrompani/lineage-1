@@ -1,0 +1,259 @@
+{% extends 'tops/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Grand Boss Status" %}{% endblock %}
+
+{% block tops_content %}
+<div class="tops-grandboss">
+    <div class="tops-header-section">
+        <h1>{% trans "Grand Boss Status" %}</h1>
+        <p class="lead">{% trans "Acompanhe o status dos grand bosses em tempo real e planeje sua próxima ofensiva." %}</p>
+    </div>
+
+    <div class="tops-grandboss-summary">
+        <div class="summary-card total">
+            <span class="summary-label">{% trans "Total" %}</span>
+            <span class="summary-value">{{ bosses|length }}</span>
+        </div>
+        <div class="summary-card alive">
+            <span class="summary-label">{% trans "Disponíveis" %}</span>
+            <span class="summary-value">{{ alive_count }}</span>
+        </div>
+        <div class="summary-card dead">
+            <span class="summary-label">{% trans "Em Respawn" %}</span>
+            <span class="summary-value">{{ dead_count }}</span>
+        </div>
+    </div>
+
+    {% if bosses %}
+    <div class="tops-grandboss-grid">
+        {% for boss in bosses %}
+        <div class="tops-grandboss-card {% if boss.is_alive %}alive{% elif boss.is_alive is False %}dead{% else %}unknown{% endif %}">
+            <div class="card-header">
+                <div class="card-title">
+                    <h3>{{ boss.name }}</h3>
+                    <span class="card-level">Lv. {{ boss.level }}</span>
+                </div>
+                <span class="status-badge">
+                    {% if boss.is_alive %}
+                        <i class="fas fa-heartbeat"></i> {% trans "Disponível" %}
+                    {% elif boss.is_alive is False %}
+                        <i class="fas fa-skull-crossbones"></i> {% trans "Morto" %}
+                    {% else %}
+                        <i class="fas fa-question-circle"></i> {% trans "Desconhecido" %}
+                    {% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="info-row">
+                    <span class="info-label">{% trans "Respawn" %}</span>
+                    <span class="info-value">
+                        {% if boss.is_alive %}
+                        {% trans "Disponível agora" %}
+                        {% elif boss.respawn_human %}
+                            {{ boss.respawn_human }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-row secondary">
+                    <span class="info-label">{% trans "Status" %}</span>
+                    <span class="info-value">{{ boss.status }}</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="tops-empty-state">
+        <i class="fas fa-exclamation-triangle"></i>
+        <h3>{% trans "Nenhum dado disponível" %}</h3>
+        <p>{% trans "Não foi possível carregar o status dos grand bosses no momento." %}</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.tops-grandboss-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.summary-card {
+    padding: 20px;
+    border-radius: 18px;
+    text-align: center;
+    background: rgba(53, 47, 35, 0.85);
+    border: 1px solid rgba(230, 199, 125, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.summary-card.total {
+    background: linear-gradient(135deg, rgba(230, 199, 125, 0.25), rgba(155, 117, 48, 0.35));
+}
+
+.summary-card.alive {
+    background: linear-gradient(135deg, rgba(63, 180, 85, 0.25), rgba(27, 94, 32, 0.35));
+}
+
+.summary-card.dead {
+    background: linear-gradient(135deg, rgba(229, 57, 53, 0.25), rgba(183, 28, 28, 0.35));
+}
+
+.summary-label {
+    display: block;
+    text-transform: uppercase;
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 6px;
+}
+
+.summary-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.tops-grandboss-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+.tops-grandboss-card {
+    background: rgba(29, 26, 22, 0.9);
+    border-radius: 20px;
+    padding: 22px;
+    border: 1px solid rgba(230, 199, 125, 0.25);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.tops-grandboss-card::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 22px;
+    z-index: -1;
+    background: linear-gradient(135deg, rgba(230, 199, 125, 0.45), rgba(155, 117, 48, 0.35));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.tops-grandboss-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.4);
+}
+
+.tops-grandboss-card:hover::before {
+    opacity: 0.55;
+}
+
+.tops-grandboss-card.alive {
+    border-color: rgba(76, 175, 80, 0.45);
+}
+
+.tops-grandboss-card.dead {
+    border-color: rgba(229, 57, 53, 0.45);
+}
+
+.tops-grandboss-card.unknown {
+    border-color: rgba(96, 125, 139, 0.45);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+
+.card-title h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #fff;
+}
+
+.card-level {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.tops-grandboss-card.alive .status-badge {
+    background: rgba(76, 175, 80, 0.2);
+    color: #a5d6a7;
+}
+
+.tops-grandboss-card.dead .status-badge {
+    background: rgba(229, 57, 53, 0.2);
+    color: #ef9a9a;
+}
+
+.tops-grandboss-card.unknown .status-badge {
+    background: rgba(96, 125, 139, 0.2);
+    color: #b0bec5;
+}
+
+.card-body {
+    display: grid;
+    gap: 14px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.info-label {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.info-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.info-row.secondary .info-value {
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+@media (max-width: 768px) {
+    .tops-grandboss-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .tops-grandboss-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tops-grandboss-card {
+        padding: 18px;
+    }
+}
+</style>
+{% endblock %}
+

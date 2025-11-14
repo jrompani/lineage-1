@@ -17,5 +17,7 @@ urlpatterns = [
     path('public/tops/level/', views.TopsLevelView.as_view(), name='level'),
     path('public/tops/online/', views.TopsOnlineView.as_view(), name='online'),
     path('public/tops/olympiad/', views.TopsOlympiadView.as_view(), name='olympiad'),
+    path('public/tops/grandboss/', views.TopsGrandBossView.as_view(), name='grandboss'),
+    path('public/tops/raidboss/', views.TopsRaidBossView.as_view(), name='raidboss'),
     path('public/tops/siege/', views.TopsSiegeView.as_view(), name='siege'),
 ]
