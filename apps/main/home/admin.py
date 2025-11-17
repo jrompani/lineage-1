@@ -115,6 +115,8 @@ class UserAdmin(BaseModelAdmin, DefaultUserAdmin):
             obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
+        if obj.is_email_verified:
+            obj.ensure_email_master_owner()
 
     class Media:
         js = ('js/mask-cpf.js',)
@@ -143,6 +145,14 @@ class AddressAdmin(BaseModelAdmin):
         queryset = super().get_queryset(request)
         return queryset.select_related('user')
     
+
+@admin.register(EmailOwnership)
+class EmailOwnershipAdmin(BaseModelAdmin):
+    list_display = ('email', 'owner', 'created_at')
+    search_fields = ('email', 'owner__username')
+    ordering = ('email',)
+    readonly_fields = ('created_at', 'updated_at')
+
 
 @admin.register(State)
 class StateAdmin(BaseModelAdminAbstratic):

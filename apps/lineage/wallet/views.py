@@ -10,6 +10,10 @@ from apps.main.home.models import User
 from django.db import transaction, models
 from .signals import aplicar_transacao, aplicar_transacao_bonus
 from apps.lineage.server.database import LineageDB
+from apps.lineage.server.services.account_context import (
+    get_active_login,
+    get_lineage_template_context,
+)
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.http import require_http_methods
 
@@ -64,15 +68,18 @@ def dashboard_wallet(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    return render(request, 'wallet/dashboard.html', {
+    context = {
         'wallet': wallet,
         'transacoes': page_obj.object_list,
         'page_obj': page_obj,
-    })
+    }
+    context.update(get_lineage_template_context(request))
+    return render(request, 'wallet/dashboard.html', context)
 
 
 @conditional_otp_required
 def transfer_to_server(request):
+    active_login = get_active_login(request)
 
     # Verifica conexão com banco do Lineage
     db = LineageDB()
@@ -90,7 +97,7 @@ def transfer_to_server(request):
 
     # Lista os personagens da conta
     try:
-        personagens = LineageServices.find_chars(request.user.username)
+        personagens = LineageServices.find_chars(active_login)
     except:
         messages.warning(request, 'Não foi possível carregar seus personagens agora.')
 
@@ -132,7 +139,7 @@ def transfer_to_server(request):
                 return redirect('wallet:dashboard')
 
         # Confirma se o personagem pertence à conta
-        personagem = TransferFromWalletToChar.find_char(request.user.username, nome_personagem)
+        personagem = TransferFromWalletToChar.find_char(active_login, nome_personagem)
         if not personagem:
             messages.error(request, 'Personagem inválido ou não pertence a essa conta.')
             return redirect('wallet:dashboard')
@@ -151,7 +158,7 @@ def transfer_to_server(request):
                         tipo="SAIDA",
                         valor=valor,
                         descricao="Transferência para o servidor (bônus)",
-                        origem=request.user.username,
+                        origem=active_login,
                         destino=nome_personagem
                     )
                 else:
@@ -160,7 +167,7 @@ def transfer_to_server(request):
                         tipo="SAIDA",
                         valor=valor,
                         descricao="Transferência para o servidor",
-                        origem=request.user.username,
+                        origem=active_login,
                         destino=nome_personagem
                     )
 
@@ -186,12 +193,14 @@ def transfer_to_server(request):
             messages.success(request, _(f"R${valor:.2f} transferidos com sucesso para o personagem {nome_personagem}."))
         return redirect('wallet:dashboard')
 
-    return render(request, 'wallet/transfer_to_server.html', {
+    context = {
         'wallet': wallet,
         'personagens': personagens,
         'show_bonus_option': getattr(config, 'exibir_opcao_bonus_transferencia', False),
         'bonus_enabled': getattr(config, 'habilitar_transferencia_com_bonus', False),
-    })
+    }
+    context.update(get_lineage_template_context(request))
+    return render(request, 'wallet/transfer_to_server.html', context)
 
 
 @conditional_otp_required

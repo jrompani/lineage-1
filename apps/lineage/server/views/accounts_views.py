@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from apps.main.home.decorator import conditional_otp_required
 from ..decorators import require_lineage_connection
@@ -10,9 +10,19 @@ from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.core.mail import send_mail
 from django.urls import reverse
 from django.conf import settings
+from django.views.decorators.http import require_POST
 from apps.main.home.tasks import send_email_task
+from apps.main.home.models import User
 from apps.lineage.server.lineage_account_manager import LineageAccount
+from apps.lineage.server.models import ManagedLineageAccount
+from apps.lineage.server.services.account_context import (
+    get_active_login,
+    get_lineage_template_context,
+    set_active_login,
+    user_has_access,
+)
 from utils.dynamic_import import get_query_class
+from django.utils.translation import gettext as _
 
 signer = TimestampSigner()
 
@@ -22,35 +32,37 @@ LineageServices = get_query_class("LineageServices")
 @conditional_otp_required
 @require_lineage_connection
 def account_dashboard(request):
-    user_login = request.user.username
-    account_data = LineageAccount.check_login_exists(user_login)
+    active_login = get_active_login(request)
+    account_data = LineageAccount.check_login_exists(active_login)
 
-    # Verifica se a conta existe
     if not account_data or len(account_data) == 0:
-        return redirect('server:lineage_register')
+        if active_login == request.user.username:
+            return redirect('server:lineage_register')
+        messages.error(request, "Conta do Lineage não encontrada.")
+        return redirect('server:manage_lineage_accounts')
 
     account = account_data[0]
-
-    # Verifica se a conta já está vinculada
-    if not account.get("linked_uuid"):
-        messages.warning(request, "Sua conta Lineage ainda não está vinculada. Por favor, vincule sua conta primeiro.")
-        return redirect('server:link_lineage_account')
-    
+    owner_uuid = account.get("linked_uuid")
     user_uuid = str(request.user.uuid)
-    if account.get("linked_uuid") != user_uuid:
-        messages.error(request, "Sua conta Lineage está vinculada a outro usuário. Por favor, vincule novamente sua conta corretamente.")
-        return redirect('server:link_lineage_account')
+    is_owner = owner_uuid == user_uuid
+
+    if not owner_uuid:
+        messages.warning(request, "Essa conta ainda não está vinculada a nenhum usuário do painel. Solicite ao proprietário para concluir o processo.")
+        return redirect('server:manage_lineage_accounts')
+
+    if not is_owner and not user_has_access(request.user, active_login):
+        messages.error(request, "Você não tem permissão para visualizar essa conta.")
+        return redirect('server:manage_lineage_accounts')
 
     try:
-        personagens = LineageServices.find_chars(user_login)
-    except Exception as e:
+        personagens = LineageServices.find_chars(active_login)
+    except Exception:
         personagens = []
         messages.warning(request, 'Não foi possível carregar seus personagens agora.')
 
     acesslevel = LineageAccount.get_acess_level()
     account['status'] = "Ativa" if int(account[acesslevel]) >= 0 else "Bloqueada"
 
-    # Formata data de criação
     created_time = None
     if account.get('created_time'):
         try:
@@ -61,13 +73,9 @@ def account_dashboard(request):
             except:
                 created_time = None
 
-    # Status dos personagens
     char_list = []
     for char in personagens:
-        # Verificando se o campo 'level' existe antes de acessá-lo
         level = char.get('base_level', '-')
-        
-        # Tenta encontrar obj_id com diferentes variações de nome
         obj_id = char.get('obj_id') or char.get('obj_Id') or char.get('charId') or char.get('char_id', '-')
         char_name = char.get('char_name') or char.get('charname', '-')
         base_class = char.get('base_class') or char.get('classid', 0)
@@ -99,10 +107,11 @@ def account_dashboard(request):
         'account': account,
         'created_time': created_time.strftime('%B %d, %Y às %H:%M') if created_time else '-',
         'lastIP': account.get('lastIP', '-'),
-        'char_count': account.get('chars', 0),
         'characters': char_list,
-        'char_count': len(char_list)
+        'char_count': len(char_list),
+        'is_owner_account': is_owner,
     }
+    context.update(get_lineage_template_context(request))
 
     return render(request, 'l2_accounts/dashboard.html', context)
 
@@ -299,3 +308,136 @@ def link_by_email_token(request, token):
     else:
         messages.error(request, "Erro ao vincular a conta.")
         return redirect("server:link_lineage_account")
+
+
+@conditional_otp_required
+@require_lineage_connection
+def manage_lineage_accounts(request):
+    delegated_links = ManagedLineageAccount.objects.filter(
+        created_by=request.user
+    ).select_related("manager_user").order_by("account_login")
+
+    links_as_manager = ManagedLineageAccount.objects.filter(
+        manager_user=request.user,
+        status=ManagedLineageAccount.Status.ACTIVE,
+    ).select_related("created_by").order_by("account_login")
+
+    context = get_lineage_template_context(request)
+    context.update(
+        {
+            "delegated_links": delegated_links,
+            "links_as_manager": links_as_manager,
+        }
+    )
+    return render(request, "l2_accounts/manage_accounts.html", context)
+
+
+@conditional_otp_required
+@require_lineage_connection
+@require_POST
+def add_contra_mestre(request):
+    if not request.user.is_email_master_owner:
+        owner = request.user.get_email_master_owner()
+        if owner and owner != request.user:
+            messages.error(
+                request,
+                _("Somente a conta mestre %(owner)s pode delegar acessos com este e-mail.") % {"owner": owner.username},
+            )
+        else:
+            messages.error(request, _("Você não tem permissão para delegar acessos."))
+        return redirect("server:manage_lineage_accounts")
+
+    account_login = (request.POST.get("account_login") or "").strip()
+    manager_username = (request.POST.get("manager_username") or "").strip()
+    notes = (request.POST.get("notes") or "").strip()
+
+    if not account_login or not manager_username:
+        messages.error(request, "Informe o login da conta e o usuário do contra mestre.")
+        return redirect("server:manage_lineage_accounts")
+
+    if manager_username == request.user.username:
+        messages.error(request, "Informe o usuário do contra mestre, não o seu.")
+        return redirect("server:manage_lineage_accounts")
+
+    try:
+        manager_user = User.objects.get(username=manager_username)
+    except User.DoesNotExist:
+        messages.error(request, "Usuário informado não foi encontrado.")
+        return redirect("server:manage_lineage_accounts")
+
+    conta = LineageAccount.get_account_by_login(account_login)
+    if not conta:
+        messages.error(request, "Conta do Lineage não encontrada.")
+        return redirect("server:manage_lineage_accounts")
+
+    if conta.get("linked_uuid") != str(request.user.uuid):
+        messages.error(request, "Apenas o proprietário da conta pode delegar contra mestres.")
+        return redirect("server:manage_lineage_accounts")
+
+    link, created = ManagedLineageAccount.objects.update_or_create(
+        account_login=account_login,
+        manager_user=manager_user,
+        defaults={
+            "created_by": request.user,
+            "role": ManagedLineageAccount.Role.CONTRA_MESTRE,
+            "status": ManagedLineageAccount.Status.ACTIVE,
+            "notes": notes,
+        },
+    )
+
+    if created:
+        messages.success(request, f"Usuário {manager_username} agora pode gerenciar a conta {account_login}.")
+    else:
+        messages.success(request, f"Permissões de {manager_username} atualizadas para a conta {account_login}.")
+
+    return redirect("server:manage_lineage_accounts")
+
+
+@conditional_otp_required
+@require_lineage_connection
+@require_POST
+def remove_contra_mestre(request, link_id):
+    link = get_object_or_404(ManagedLineageAccount, pk=link_id)
+    if not request.user.is_email_master_owner:
+        owner = request.user.get_email_master_owner()
+        if owner and owner != request.user:
+            messages.error(
+                request,
+                _("Somente a conta mestre %(owner)s pode revogar acessos com este e-mail.") % {"owner": owner.username},
+            )
+        else:
+            messages.error(request, _("Você não tem permissão para revogar acessos."))
+        return redirect("server:manage_lineage_accounts")
+
+    is_owner = False
+    conta = LineageAccount.get_account_by_login(link.account_login)
+    if conta and conta.get("linked_uuid") == str(request.user.uuid):
+        is_owner = True
+
+    if not (link.created_by == request.user or is_owner or request.user.is_superuser):
+        messages.error(request, "Você não pode remover este contra mestre.")
+        return redirect("server:manage_lineage_accounts")
+
+    link.delete()
+    messages.success(request, "Contra mestre removido com sucesso.")
+    return redirect("server:manage_lineage_accounts")
+
+
+@conditional_otp_required
+@require_lineage_connection
+@require_POST
+def set_active_lineage_account(request):
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or reverse("server:account_dashboard")
+    account_login = (request.POST.get("account_login") or "").strip()
+
+    if not account_login:
+        messages.error(request, "Selecione uma conta válida.")
+        return redirect(next_url)
+
+    try:
+        set_active_login(request, account_login)
+        messages.success(request, f"Conta {account_login} definida como ativa.")
+    except PermissionError:
+        messages.error(request, "Você não tem permissão para usar essa conta.")
+
+    return redirect(next_url)

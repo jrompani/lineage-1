@@ -20,6 +20,10 @@ import json
 from apps.main.home.models import PerfilGamer
 
 from utils.dynamic_import import get_query_class
+from apps.lineage.server.services.account_context import (
+    get_active_login,
+    get_lineage_template_context,
+)
 LineageServices = get_query_class("LineageServices")
 
 
@@ -126,12 +130,19 @@ def fazer_lance(request, auction_id):
             messages.error(request, _(f'Ocorreu um erro ao realizar o lance: {str(e)}'))
             return redirect('auction:fazer_lance', auction_id=auction.id)
         
+    active_login = get_active_login(request)
     try:
-        personagens = LineageServices.find_chars(request.user.username)
+        personagens = LineageServices.find_chars(active_login)
     except:
         messages.warning(request, _('Não foi possível carregar seus personagens agora.'))
 
-    return render(request, 'auction/fazer_lance.html', {'auction': auction, 'personagens': personagens})
+    context = {
+        'auction': auction,
+        'personagens': personagens,
+    }
+    context.update(get_lineage_template_context(request))
+
+    return render(request, 'auction/fazer_lance.html', context)
 
 
 @conditional_otp_required

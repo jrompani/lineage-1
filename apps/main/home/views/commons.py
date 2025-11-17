@@ -77,6 +77,9 @@ def verificar_email(request, uidb64, token):
             perfil, _ = PerfilGamer.objects.get_or_create(user=user)
             perfil.adicionar_xp(40)  # valor de XP por verificar e-mail
 
+            # Define a conta mestre do e-mail (primeira verificação vira dona)
+            user.ensure_email_master_owner()
+
             # Opcional: Armazena mensagem para exibir no template
             context = {
                 'sucesso': True,

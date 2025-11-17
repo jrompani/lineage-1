@@ -441,6 +441,22 @@
           <i class="fas fa-star me-2"></i>
           {% trans "Bem-vindo ao seu centro de controle do jogo" %}
         </p>
+        <div class="mt-3 d-flex justify-content-center align-items-center flex-wrap gap-2">
+          <span class="badge bg-dark fs-6 px-4 py-2">
+            {% trans "Conta ativa" %}: {{ active_account_login }}
+          </span>
+          <a href="{% url 'server:manage_lineage_accounts' %}" class="btn btn-light btn-sm">
+            <i class="bi bi-arrow-repeat me-1"></i>{% trans "Alterar conta" %}
+          </a>
+        </div>
+        {% if email_master_owner and email_master_owner.username != request.user.username %}
+        <div class="alert alert-warning mt-3 mb-0">
+          <i class="bi bi-link-45deg me-2"></i>
+          {% blocktrans with master=email_master_owner.username %}
+          Conta vinculada à conta mestre {{ master }}.
+          {% endblocktrans %}
+        </div>
+        {% endif %}
       </div>
 
       <!-- Informações da Conta -->

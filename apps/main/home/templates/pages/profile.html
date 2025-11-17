@@ -606,6 +606,24 @@
               </div>
             </div>
 
+            <!-- Email Warning Section -->
+            <div class="info-section">
+              <div class="alert alert-info" style="background: linear-gradient(135deg, #d1ecf1, #bee5eb); border: 2px solid #0dcaf0; border-radius: 12px; padding: 1.25rem; margin-bottom: 0;">
+                <h6 style="color: #055160; font-weight: 600; margin-bottom: 0.75rem;">
+                  <i class="fas fa-info-circle me-2"></i>{% trans "Sobre o Sistema de E-mail e Conta Mestre" %}
+                </h6>
+                <p style="color: #055160; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                  {% trans "O e-mail é usado para determinar a 'Conta Mestre' que gerencia múltiplas contas do Lineage:" %}
+                </p>
+                <ul style="margin-bottom: 0; padding-left: 1.5rem; color: #055160; font-size: 0.85rem;">
+                  <li>{% trans "A primeira conta que verificar um e-mail se torna a Conta Mestre desse e-mail." %}</li>
+                  <li>{% trans "A Conta Mestre pode delegar acesso de contra mestres para outras contas do Lineage." %}</li>
+                  <li>{% trans "Se você alterar seu e-mail, precisará verificá-lo novamente e pode perder ou ganhar o status de mestre dependendo do e-mail escolhido." %}</li>
+                  <li>{% trans "Para alterar seu e-mail, acesse a página de edição do perfil." %}</li>
+                </ul>
+              </div>
+            </div>
+
             <!-- Bio Section -->
             {% if user.bio %}
               <div class="info-section">

@@ -404,6 +404,18 @@
                       {% endfor %}
                     </div>
                   {% endif %}
+                  <div class="alert alert-warning mt-3" style="background: linear-gradient(135deg, #fff3cd, #ffeaa7); border: 2px solid #ffc107; border-radius: 12px; padding: 1rem;">
+                    <h6 style="color: #856404; font-weight: 600; margin-bottom: 0.75rem;">
+                      <i class="fas fa-exclamation-triangle me-2"></i>{% trans "Atenção: Alteração de E-mail" %}
+                    </h6>
+                    <ul style="margin-bottom: 0; padding-left: 1.5rem; color: #856404; font-size: 0.9rem;">
+                      <li>{% trans "A primeira conta que verificar um e-mail se torna a 'Conta Mestre' desse e-mail." %}</li>
+                      <li>{% trans "Se você alterar seu e-mail para um que já possui uma conta mestre, você se tornará subordinado a ela." %}</li>
+                      <li>{% trans "Se você for a conta mestre do e-mail atual e alterá-lo, perderá esse status e outras contas com o mesmo e-mail antigo poderão se tornar mestres." %}</li>
+                      <li>{% trans "Contas mestres podem delegar acesso de contra mestres para outras contas do Lineage." %}</li>
+                      <li>{% trans "Após alterar o e-mail, você precisará verificá-lo novamente para confirmar a propriedade." %}</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
 

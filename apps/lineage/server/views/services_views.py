@@ -10,6 +10,10 @@ from ..decorators import require_lineage_connection
 import re
 
 from utils.dynamic_import import get_query_class  
+from apps.lineage.server.services.account_context import (
+    get_active_login,
+    get_lineage_template_context,
+)
 LineageServices = get_query_class("LineageServices")
 TransferFromCharToWallet = get_query_class("TransferFromCharToWallet")
 
@@ -23,10 +27,11 @@ def change_nickname_view(request, char_id):
         messages.error(request, _("Preço do serviço não configurado."))
         return redirect("server:account_dashboard")
     
-    response = TransferFromCharToWallet.find_char(request.user.username, char_id)
+    active_login = get_active_login(request)
+    response = TransferFromCharToWallet.find_char(active_login, char_id)
     
     if request.method == "POST":
-        acc = request.user.username
+        acc = active_login
         cid = char_id
         name = request.POST.get("name")
 
@@ -65,6 +70,7 @@ def change_nickname_view(request, char_id):
         'char_name': response[0]['char_name'],
         'price': price
     }
+    context.update(get_lineage_template_context(request))
     return render(request, "services/change_nickname.html", context)
 
 
@@ -77,10 +83,11 @@ def change_sex_view(request, char_id):
         messages.error(request, _("Preço do serviço não configurado."))
         return redirect("server:account_dashboard")
     
-    response = TransferFromCharToWallet.find_char(request.user.username, char_id)
+    active_login = get_active_login(request)
+    response = TransferFromCharToWallet.find_char(active_login, char_id)
 
     if request.method == "POST":
-        acc = request.user.username
+        acc = active_login
         cid = char_id
         sex_input = request.POST.get("sex")
 
@@ -120,6 +127,7 @@ def change_sex_view(request, char_id):
         'price': price,
         'char_name': response[0]['char_name'],
     }
+    context.update(get_lineage_template_context(request))
     return render(request, "services/change_sex.html", context)
 
 
@@ -127,10 +135,11 @@ def change_sex_view(request, char_id):
 @require_lineage_connection
 def unstuck_view(request, char_id):
 
-    response = TransferFromCharToWallet.find_char(request.user.username, char_id)
+    active_login = get_active_login(request)
+    response = TransferFromCharToWallet.find_char(active_login, char_id)
 
     if request.method == "POST":
-        acc = request.user.username
+        acc = active_login
         cid = char_id
 
         if not response:
@@ -157,6 +166,7 @@ def unstuck_view(request, char_id):
         'char_id': char_id,
         'char_name': response[0]['char_name'],
     }
+    context.update(get_lineage_template_context(request))
     return render(request, "services/unstuck.html", context)
 
 

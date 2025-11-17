@@ -1,5 +1,5 @@
 from django.contrib.auth.models import AbstractUser
-from django.db import models
+from django.db import models, transaction
 from core.models import BaseModel, BaseModelAbstract
 from .utils import validate_cpf, remove_cpf_mask
 from encrypted_fields.encrypted_fields import *
@@ -22,7 +22,6 @@ class User(BaseModel, AbstractUser):
     )
 
     email = models.EmailField(
-        unique=True,
         verbose_name=_("E-mail"),
         validators=[validate_email]
     )
@@ -113,9 +112,46 @@ class User(BaseModel, AbstractUser):
         }
         return icons.get(self.profile_type, 'bi-person')
 
+    def ensure_email_master_owner(self):
+        """Garante que exista um dono registrado para este e-mail e retorna o owner."""
+        if not self.email:
+            return None
+
+        with transaction.atomic():
+            ownership, _ = EmailOwnership.objects.select_for_update().get_or_create(
+                email=self.email,
+                defaults={'owner': self}
+            )
+        return ownership.owner
+
+    def get_email_master_owner(self):
+        """Retorna o usuário dono do e-mail (ou None se não houver)."""
+        if not self.email:
+            return None
+
+        ownership = EmailOwnership.objects.filter(email=self.email).select_related('owner').first()
+        return ownership.owner if ownership else None
+
+    @property
+    def is_email_master_owner(self):
+        owner = self.get_email_master_owner()
+        return (owner is None) or (owner.pk == self.pk)
+
     class Meta:
         verbose_name = _('Usuário')
         verbose_name_plural = _('Usuários')
+
+
+class EmailOwnership(BaseModel):
+    email = models.EmailField(unique=True, verbose_name=_("E-mail"))
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_emails', verbose_name=_("Conta Mestre"))
+
+    class Meta:
+        verbose_name = _("Domínio de E-mail")
+        verbose_name_plural = _("Domínios de E-mail")
+
+    def __str__(self):
+        return f"{self.email} → {self.owner.username}"
 
 
 class AddressUser(BaseModel):

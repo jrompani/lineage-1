@@ -429,6 +429,10 @@
             <span class="user-info-value">{{ request.user.username }}</span>
           </div>
           <div class="user-info-item">
+            <span class="user-info-label">{% trans "Conta do jogo:" %}</span>
+            <span class="user-info-value text-warning">{{ active_account_login }}</span>
+          </div>
+          <div class="user-info-item">
             <span class="user-info-label">{% trans "Saldo atual:" %}</span>
             <span class="user-info-value balance">R$ {{ wallet.saldo|floatformat:2 }}</span>
           </div>

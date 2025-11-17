@@ -34,6 +34,10 @@ urlpatterns = [
     path('account/link-lineage-account/', link_lineage_account, name='link_lineage_account'),
     path('account/link-by-email/', request_link_by_email, name='request_link_by_email'),
     path('account/link-by-email/<str:token>/', link_by_email_token, name='link_by_email_token'),
+    path('account/manage/', manage_lineage_accounts, name='manage_lineage_accounts'),
+    path('account/manage/add/', add_contra_mestre, name='add_contra_mestre'),
+    path('account/manage/remove/<int:link_id>/', remove_contra_mestre, name='remove_contra_mestre'),
+    path('account/set-active/', set_active_lineage_account, name='set_active_lineage_account'),
 
     path('supporter/panel/', painel_apoiador, name='painel_apoiador'),
     path('supporter/request/', formulario_apoiador, name='formulario_apoiador'),

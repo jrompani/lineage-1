@@ -355,6 +355,9 @@
                            <a href="{% url 'downloads:internal_download_list' %}" class="action-btn header-btn" style="background: linear-gradient(45deg, #dc3545, #fd7e14);">
                 <i class="fas fa-download me-1"></i>{% trans "Download" %}
               </a>
+              <button type="button" class="action-btn header-btn" style="background: linear-gradient(45deg, #6c757d, #495057);" data-bs-toggle="modal" data-bs-target="#multiAccountModal" title="{% trans 'Sobre Conta Mestre e Múltiplas Contas' %}">
+                <i class="fas fa-question-circle me-1"></i>{% trans "?" %}
+              </button>
            </div>
          </div>
       </div>
@@ -642,4 +645,86 @@
     </div>
   </div>
 {% endif %}
+
+<!-- Modal: Sistema de Conta Mestre e Múltiplas Contas -->
+<div class="modal fade" id="multiAccountModal" tabindex="-1" aria-labelledby="multiAccountModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content" style="background: linear-gradient(135deg, #1a1a2e 0%, #121220 100%); border: 2px solid #6f42c1; border-radius: 20px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #6f42c1, #e83e8c); border-bottom: 2px solid #6f42c1; border-radius: 18px 18px 0 0;">
+        <h5 class="modal-title text-white fw-bold" id="multiAccountModalLabel">
+          <i class="fas fa-crown me-2"></i>{% trans "Sistema de Conta Mestre e Múltiplas Contas" %}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" style="color: #f8f9fa; padding: 2rem;">
+        <div class="mb-4">
+          <h6 class="text-info mb-3" style="border-left: 4px solid #0dcaf0; padding-left: 1rem;">
+            <i class="fas fa-info-circle me-2"></i>{% trans "O que é a Conta Mestre?" %}
+          </h6>
+          <p style="color: #e2e8f0; line-height: 1.8;">
+            {% trans "A Conta Mestre é a primeira conta que verifica um endereço de e-mail. Ela tem o poder de gerenciar múltiplas contas do Lineage 2 através do sistema de delegação de acesso." %}
+          </p>
+        </div>
+
+        <div class="mb-4">
+          <h6 class="text-warning mb-3" style="border-left: 4px solid #ffc107; padding-left: 1rem;">
+            <i class="fas fa-key me-2"></i>{% trans "Como funciona?" %}
+          </h6>
+          <ul style="color: #e2e8f0; line-height: 1.8; padding-left: 1.5rem;">
+            <li>{% trans "Quando você verifica seu e-mail pela primeira vez, você se torna a Conta Mestre desse e-mail." %}</li>
+            <li>{% trans "Se outras contas usarem o mesmo e-mail e verificarem, elas se tornam subordinadas à Conta Mestre." %}</li>
+            <li>{% trans "A Conta Mestre pode delegar acesso de 'Contra Mestre' para outras contas do Lineage 2." %}</li>
+            <li>{% trans "Contra mestres podem gerenciar as contas do Lineage que receberam permissão, mas não podem delegar novos acessos." %}</li>
+          </ul>
+        </div>
+
+        <div class="mb-4">
+          <h6 class="text-success mb-3" style="border-left: 4px solid #28a745; padding-left: 1rem;">
+            <i class="fas fa-users-cog me-2"></i>{% trans "Gerenciar Múltiplas Contas" %}
+          </h6>
+          <p style="color: #e2e8f0; line-height: 1.8; margin-bottom: 1rem;">
+            {% trans "Você pode alternar entre diferentes contas do Lineage 2 diretamente no painel:" %}
+          </p>
+          <ol style="color: #e2e8f0; line-height: 1.8; padding-left: 1.5rem;">
+            <li>{% trans "Acesse" %} <a href="{% url 'server:manage_lineage_accounts' %}" class="text-info text-decoration-underline">{% trans "Gerenciar Contas Lineage" %}</a></li>
+            <li>{% trans "Selecione a conta que deseja usar no momento" %}</li>
+            <li>{% trans "Todas as funcionalidades (inventário, carteira, shop, etc.) usarão a conta selecionada" %}</li>
+          </ol>
+        </div>
+
+        <div class="mb-4">
+          <h6 class="text-danger mb-3" style="border-left: 4px solid #dc3545; padding-left: 1rem;">
+            <i class="fas fa-exclamation-triangle me-2"></i>{% trans "Importante: Alteração de E-mail" %}
+          </h6>
+          <ul style="color: #e2e8f0; line-height: 1.8; padding-left: 1.5rem;">
+            <li>{% trans "Se você alterar seu e-mail, precisará verificá-lo novamente." %}</li>
+            <li>{% trans "Se você for a Conta Mestre e alterar o e-mail, perderá esse status." %}</li>
+            <li>{% trans "Se você alterar para um e-mail que já tem uma Conta Mestre, se tornará subordinado a ela." %}</li>
+            <li>{% trans "Pense bem antes de alterar seu e-mail se você for a Conta Mestre!" %}</li>
+          </ul>
+        </div>
+
+        <div class="alert alert-info mt-4" style="background: linear-gradient(135deg, rgba(13, 202, 240, 0.15), rgba(13, 202, 240, 0.05)); border: 1px solid rgba(13, 202, 240, 0.3); border-radius: 12px;">
+          <div class="d-flex align-items-start">
+            <i class="fas fa-lightbulb text-info me-3 mt-1" style="font-size: 1.5rem;"></i>
+            <div>
+              <strong class="text-info">{% trans "Dica:" %}</strong>
+              <p class="mb-0 mt-2" style="color: #e2e8f0;">
+                {% trans "Use o mesmo e-mail em múltiplas contas do Lineage 2 para gerenciá-las todas de um único lugar. A primeira conta a verificar o e-mail se torna a mestre e pode delegar acesso para outras contas." %}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="background: rgba(15, 23, 42, 0.5); border-top: 1px solid rgba(111, 66, 193, 0.3); border-radius: 0 0 18px 18px;">
+        <a href="{% url 'server:manage_lineage_accounts' %}" class="btn" style="background: linear-gradient(45deg, #6f42c1, #e83e8c); color: white; border: none; border-radius: 12px; padding: 0.5rem 1.5rem; font-weight: 600;">
+          <i class="fas fa-cog me-2"></i>{% trans "Gerenciar Contas" %}
+        </a>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 12px; padding: 0.5rem 1.5rem;">
+          {% trans "Fechar" %}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock content %}

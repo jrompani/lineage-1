@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+from rest_framework.exceptions import PermissionDenied
 from django.utils.timezone import make_aware, now
 from datetime import datetime
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
@@ -13,21 +14,43 @@ from utils.dynamic_import import get_query_class
 LineageAccount = get_query_class("LineageAccount")
 LineageServices = get_query_class("LineageServices")
 signer = TimestampSigner()
+from apps.lineage.server.services.account_context import user_has_access
 
+
+def resolve_account_login(request):
+    """
+    Determina qual conta do Lineage deve ser utilizada na requisição.
+    Prioriza parâmetros explícitos e, em seguida, dados de sessão ou username.
+    """
+    account_login = (
+        request.query_params.get("account_login")
+        or request.data.get("account_login")
+        or request.session.get("lineage_active_login")
+        or request.user.username
+    )
+
+    account_login = (account_login or "").strip()
+    if not account_login:
+        account_login = request.user.username
+
+    if not user_has_access(request.user, account_login):
+        raise PermissionDenied("Você não tem permissão para acessar essa conta.")
+
+    return account_login
 class AccountDashboardAPI(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        user_login = request.user.username
+        user_login = resolve_account_login(request)
         account_data = LineageAccount.check_login_exists(user_login)
         if not account_data or len(account_data) == 0:
             return Response({'error': 'Conta não existe.'}, status=404)
         account = account_data[0]
         if not account.get("linked_uuid"):
             return Response({'error': 'Conta não vinculada.'}, status=400)
-        user_uuid = str(request.user.uuid)
-        if account.get("linked_uuid") != user_uuid:
-            return Response({'error': 'Conta vinculada a outro usuário.'}, status=400)
+        owner_uuid = account.get("linked_uuid")
+        if owner_uuid != str(request.user.uuid) and not user_has_access(request.user, user_login):
+            raise PermissionDenied("Você não tem permissão para visualizar essa conta.")
         try:
             personagens = LineageServices.find_chars(user_login)
         except Exception:

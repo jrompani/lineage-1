@@ -12,6 +12,11 @@ from apps.main.home.models import PerfilGamer
 
 from .models import Inventory, InventoryItem, BlockedServerItem, InventoryLog
 from apps.lineage.server.database import LineageDB
+from apps.lineage.server.services.account_context import (
+    get_active_login,
+    get_lineage_template_context,
+    user_has_access,
+)
 from utils.dynamic_import import get_query_class
 from django.core.paginator import Paginator
 from django.http import JsonResponse
@@ -30,25 +35,36 @@ def retirar_item_servidor(request):
     if not db.is_connected():
         messages.error(request, 'O banco do jogo está indisponível no momento. Tente novamente mais tarde.')
         return redirect('inventory:inventario_dashboard')
-    
-    # Verifica se a conta Lineage está vinculada
-    account_data = LineageAccount.check_login_exists(request.user.username)
-    if not account_data or len(account_data) == 0:
-        return redirect('server:lineage_register')
-    
-    if not account_data[0].get("linked_uuid"):
-        messages.error(request, "Sua conta Lineage não está vinculada. Por favor, vincule sua conta antes de atualizar a senha.")
-        return redirect('server:link_lineage_account')
-    
+
+    active_login = get_active_login(request)
+    account_data = LineageAccount.check_login_exists(active_login)
+    if not account_data:
+        if active_login == request.user.username:
+            return redirect('server:lineage_register')
+        messages.error(request, 'Conta Lineage não encontrada.')
+        return redirect('server:manage_lineage_accounts')
+
+    account = account_data[0]
+    owner_uuid = account.get("linked_uuid")
     user_uuid = str(request.user.uuid)
-    if account_data[0].get("linked_uuid") != user_uuid:
-        messages.error(request, "Sua conta Lineage está vinculada a outro usuário. Por favor, vincule novamente sua conta corretamente.")
+    is_owner = owner_uuid == user_uuid
+
+    if not owner_uuid:
+        messages.error(request, 'Essa conta ainda não está vinculada no painel.')
+        return redirect('server:manage_lineage_accounts')
+
+    if active_login == request.user.username and not is_owner:
+        messages.error(request, 'Sua conta Lineage está vinculada a outro usuário. Por favor, revise a vinculação.')
         return redirect('server:link_lineage_account')
+
+    if not user_has_access(request.user, active_login):
+        messages.error(request, 'Você não tem permissão para operar essa conta.')
+        return redirect('server:manage_lineage_accounts')
 
     personagens = []
     try:
-        personagens = LineageServices.find_chars(request.user.username)
-    except:
+        personagens = LineageServices.find_chars(active_login)
+    except Exception:
         messages.warning(request, 'Não foi possível carregar seus personagens agora.')
 
     char_id = request.GET.get('char_id') or request.POST.get('char_id')
@@ -58,7 +74,7 @@ def retirar_item_servidor(request):
 
     if char_id:
         try:
-            personagem = TransferFromCharToWallet.find_char(request.user.username, char_id)
+            personagem = TransferFromCharToWallet.find_char(active_login, char_id)
             if not personagem:
                 messages.error(request, 'Personagem não encontrado ou não pertence à sua conta.')
                 return redirect('inventory:retirar_item')
@@ -117,7 +133,7 @@ def retirar_item_servidor(request):
         # Localiza ou cria o inventário online do personagem
         inventory, created = Inventory.objects.get_or_create(
             user=request.user,
-            account_name=request.user.username,
+            account_name=active_login,
             character_name=personagem[0]['char_name'],
         )
 
@@ -149,12 +165,14 @@ def retirar_item_servidor(request):
         messages.success(request, 'Item transferido com sucesso!')
         return redirect(f"{request.path}?char_id={char_id}")
 
-    return render(request, 'pages/retirar_item.html', {
+    context = {
         'personagens': personagens,
         'char_id': char_id,
         'items': items,
         'personagem': personagem[0] if personagem else None
-    })
+    }
+    context.update(get_lineage_template_context(request))
+    return render(request, 'pages/retirar_item.html', context)
 
 
 @conditional_otp_required
@@ -164,8 +182,9 @@ def inserir_item_servidor(request, char_name, item_id):
         messages.error(request, 'O banco do jogo está indisponível no momento. Tente novamente mais tarde.')
         return redirect('inventory:inventario_dashboard')
 
+    active_login = get_active_login(request)
     try:
-        personagem = TransferFromWalletToChar.find_char(request.user.username, char_name)
+        personagem = TransferFromWalletToChar.find_char(active_login, char_name)
         if not personagem:
             messages.error(request, 'Personagem não encontrado ou não pertence à sua conta.')
             return redirect('inventory:inventario_dashboard')
@@ -177,7 +196,7 @@ def inserir_item_servidor(request, char_name, item_id):
     try:
         inventory = Inventory.objects.get(
             user=request.user,
-            account_name=request.user.username,
+            account_name=active_login,
             character_name=personagem[0]['char_name']
         )
         item = InventoryItem.objects.get(inventory=inventory, item_id=item_id)
@@ -231,10 +250,12 @@ def inserir_item_servidor(request, char_name, item_id):
         messages.success(request, f'{quantity}x {item.item_name} inserido no servidor com sucesso!')
         return redirect('inventory:inventario_dashboard')
 
-    return render(request, 'pages/inserir_item_direct.html', {
+    context = {
         'personagem': personagem[0],
         'item': item,
-    })
+    }
+    context.update(get_lineage_template_context(request))
+    return render(request, 'pages/inserir_item_direct.html', context)
 
 
 @conditional_otp_required
@@ -322,8 +343,9 @@ def trocar_item_com_jogador(request):
 @conditional_otp_required
 def inventario_dashboard(request):
     # Obter personagens da conta do usuário
+    active_login = get_active_login(request)
     try:
-        personagens = LineageServices.find_chars(request.user.username)
+        personagens = LineageServices.find_chars(active_login)
         personagens_nomes = [p['char_name'] for p in personagens]
     except Exception as e:
         messages.error(request, 'Erro ao carregar personagens da conta. Tente novamente.')
@@ -344,7 +366,7 @@ def inventario_dashboard(request):
             try:
                 inventory = Inventory.objects.create(
                     user=request.user,
-                    account_name=request.user.username,
+                    account_name=active_login,
                     character_name=personagem
                 )
                 inventarios_criados.append(personagem)
@@ -381,10 +403,12 @@ def inventario_dashboard(request):
             'items': inv_items
         })
 
-    return render(request, 'pages/inventario_dashboard.html', {
+    context = {
         'inventory_data': inventory_data,
         'inventarios_obsoletos': inventarios_obsoletos
-    })
+    }
+    context.update(get_lineage_template_context(request))
+    return render(request, 'pages/inventario_dashboard.html', context)
 
 
 @conditional_otp_required
@@ -486,13 +510,14 @@ def deletar_inventario_obsoleto(request, character_name):
     """
     Deleta um inventário obsoleto, transferindo seus itens para a bag se necessário
     """
+    active_login = get_active_login(request)
     try:
         # Verificar se o inventário existe e pertence ao usuário
         inventory = get_object_or_404(Inventory, character_name=character_name, user=request.user)
         
         # Verificar se o personagem realmente não existe mais na conta
         try:
-            personagens = LineageServices.find_chars(request.user.username)
+            personagens = LineageServices.find_chars(active_login)
             personagens_nomes = [p['char_name'] for p in personagens]
             
             if character_name in personagens_nomes:

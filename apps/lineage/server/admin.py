@@ -136,3 +136,17 @@ class ComissaoAdmin(BaseModelAdmin):
 class ApoiadorDefaultAdmin(BaseModelAdmin):
     list_display = ("id", "ordem", "imagem")
     ordering = ("ordem",)
+
+
+@admin.register(ManagedLineageAccount)
+class ManagedLineageAccountAdmin(BaseModelAdmin):
+    list_display = (
+        "account_login",
+        "manager_user",
+        "role",
+        "status",
+        "created_by",
+        "created_at",
+    )
+    list_filter = ("role", "status")
+    search_fields = ("account_login", "manager_user__username")

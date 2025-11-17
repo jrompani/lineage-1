@@ -8,6 +8,10 @@ from .services import MarketplaceService
 from apps.lineage.server.database import LineageDB
 from utils.dynamic_import import get_query_class
 from utils.resources import get_class_name
+from apps.lineage.server.services.account_context import (
+    get_active_login,
+    get_lineage_template_context,
+)
 
 # Importa classes de query dinamicamente
 LineageMarketplace = get_query_class("LineageMarketplace")
@@ -57,8 +61,9 @@ def sell_character(request):
     
     # Busca personagens do usuário
     characters = []
+    active_login = get_active_login(request)
     try:
-        account_name = request.user.username
+        account_name = active_login
         characters = LineageMarketplace.get_user_characters(account_name)
         
         # Filtrar personagens que já estão à venda
@@ -96,7 +101,7 @@ def sell_character(request):
             transfer = MarketplaceService.list_character_for_sale(
                 user=request.user,
                 char_id=int(char_id_clean),
-                account_name=request.user.username,
+                account_name=active_login,
                 price=float(price_clean),
                 currency=currency,
                 notes=notes
@@ -117,6 +122,7 @@ def sell_character(request):
     context = {
         'characters': characters if characters else [],
     }
+    context.update(get_lineage_template_context(request))
     
     return render(request, 'marketplace/sell.html', context)
 

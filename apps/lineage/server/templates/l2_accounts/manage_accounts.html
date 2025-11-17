@@ -1,0 +1,313 @@
+{% extends "layouts/base.html" %}
+{% load i18n %}
+
+{% block extrastyle %}
+<style>
+  .manage-accounts-hero {
+    background: #1f2937;
+    border-radius: 24px;
+    padding: 2.5rem;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(15, 23, 42, 0.45);
+  }
+
+  .manage-accounts-hero .badge {
+    position: relative;
+    z-index: 1;
+    color: #f8fafc;
+  }
+
+  .neon-card {
+    border: none;
+    border-radius: 18px;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 10px 35px rgba(15, 23, 42, .45);
+    color: #f1f5f9;
+  }
+
+  .neon-card .card-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: transparent;
+    color: #f8fafc;
+    font-weight: 600;
+    letter-spacing: .4px;
+  }
+
+  .neon-card .card-header h5 {
+    color: #e0e7ff;
+    margin-bottom: 0;
+  }
+
+  .neon-card .form-control,
+  .neon-card .form-select,
+  .neon-card textarea {
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(148, 163, 184, .3);
+    color: #e2e8f0;
+  }
+
+  .neon-card .form-label {
+    color: #cbd5f5;
+    font-weight: 600;
+  }
+
+  .neon-card small,
+  .neon-card .form-text {
+    color: rgba(226, 232, 240, 0.75) !important;
+  }
+
+  .neon-card .form-control:focus,
+  .neon-card .form-select:focus,
+  .neon-card textarea:focus {
+    border-color: #a855f7;
+    box-shadow: 0 0 0 0.15rem rgba(168, 85, 247, 0.25);
+  }
+
+  .manage-badge {
+    background: linear-gradient(120deg, #a855f7, #ec4899);
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .table-dark-glass {
+    color: #e2e8f0;
+  }
+
+  .table-dark-glass thead {
+    background: rgba(148, 163, 184, 0.15);
+  }
+
+  .table-dark-glass tbody tr {
+    background: rgba(15, 23, 42, 0.55);
+    border-color: rgba(148, 163, 184, 0.15);
+    color: #e2e8f0;
+  }
+
+  .cta-muted {
+    color: #94a3b8;
+  }
+
+  .table-dark-glass th {
+    color: #cbd5f5;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: .08em;
+  }
+
+  .neon-card p {
+    color: rgba(226, 232, 240, 0.85);
+  }
+
+  .manage-accounts-hero h2 {
+    color: #ffffff;
+  }
+
+  .manage-accounts-hero p,
+  .manage-accounts-hero span {
+    color: rgba(248, 250, 252, 0.85);
+  }
+</style>
+{% endblock extrastyle %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row">
+    <div class="col-12">
+      <div class="manage-accounts-hero mb-5">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+          <div>
+            <p class="text-uppercase text-xs mb-2 opacity-75">{% trans "Conselho Arcano" %}</p>
+            <h2 class="mb-2 fw-bold">{% trans "Gerenciar contas Lineage" %}</h2>
+            <p class="mb-0 opacity-75">
+              {% trans "Alterne rapidamente entre suas contas do jogo e delegue acesso seguro para contra mestres." %}
+            </p>
+          </div>
+          <div class="text-md-end">
+            <span class="badge manage-badge fs-6 px-4 py-2 text-white">
+              <i class="bi bi-lightning-charge me-2"></i>{% trans "Conta ativa" %}: {{ active_account_login }}
+            </span>
+          </div>
+        </div>
+        {% if email_master_owner and email_master_owner.username != request.user.username %}
+        <div class="alert alert-warning mt-4 mb-0 position-relative z-1">
+          <i class="bi bi-link-45deg me-2"></i>
+          {% blocktrans with master=email_master_owner.username %}
+          Esta conta está vinculada à conta mestre {{ master }}. Apenas a conta mestre pode delegar novos acessos.
+          {% endblocktrans %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-6">
+      <div class="card neon-card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">{% trans "Selecionar conta ativa" %}</h5>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'server:set_active_lineage_account' %}" class="row g-3">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <div class="col-12">
+              <label class="form-label">{% trans "Conta do jogo" %}</label>
+              <select class="form-select" name="account_login" required>
+                {% for account in available_lineage_accounts %}
+                  <option value="{{ account.login }}" {% if account.login == active_account_login %}selected{% endif %}>
+                    {{ account.login }} — {{ account.role_label }}
+                    {% if account.created_by %}
+                      ({{ account.created_by }})
+                    {% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 text-end">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check2-circle me-2"></i>{% trans "Definir como ativa" %}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card neon-card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">{% trans "Delegar contra mestre" %}</h5>
+        </div>
+        <div class="card-body">
+          {% if is_email_master_owner %}
+          <form method="post" action="{% url 'server:add_contra_mestre' %}" class="row g-3">
+            {% csrf_token %}
+            <div class="col-12">
+              <label class="form-label">{% trans "Conta do jogo" %}</label>
+              <input type="text" name="account_login" class="form-control" value="{{ active_account_login }}" required>
+              <small class="text-muted">{% trans "Somente contas vinculadas ao seu usuário podem ser delegadas." %}</small>
+            </div>
+            <div class="col-12">
+              <label class="form-label">{% trans "Usuário do contra mestre" %}</label>
+              <input type="text" name="manager_username" class="form-control" required placeholder="{% trans 'Digite o username do portal' %}">
+            </div>
+            <div class="col-12">
+              <label class="form-label">{% trans "Observações (opcional)" %}</label>
+              <textarea name="notes" class="form-control" rows="2" placeholder="{% trans 'Ex: funções que o contra mestre poderá executar' %}"></textarea>
+            </div>
+            <div class="col-12 text-end">
+              <button type="submit" class="btn btn-success">
+                <i class="bi bi-person-plus-fill me-2"></i>{% trans "Adicionar contra mestre" %}
+              </button>
+            </div>
+          </form>
+          {% else %}
+          <p class="mb-0 cta-muted">
+            <i class="bi bi-info-circle me-2"></i>
+            {% blocktrans with master=email_master_owner.username %}
+            Apenas a conta mestre {{ master }} pode delegar novos contra mestres para este e-mail.
+            {% endblocktrans %}
+          </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card neon-card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">{% trans "Contra mestres com acesso às suas contas" %}</h5>
+          <span class="badge bg-secondary">{{ delegated_links|length }}</span>
+        </div>
+        <div class="card-body p-0">
+          {% if delegated_links %}
+            <div class="table-responsive table-dark-glass">
+              <table class="table mb-0 align-middle">
+                <thead>
+                  <tr>
+                    <th>{% trans "Conta" %}</th>
+                    <th>{% trans "Contra mestre" %}</th>
+                    <th>{% trans "Notas" %}</th>
+                    <th class="text-center">{% trans "Ações" %}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for link in delegated_links %}
+                    <tr>
+                      <td class="fw-semibold">{{ link.account_login }}</td>
+                      <td>{{ link.manager_user.username }}</td>
+                      <td>{{ link.notes|default:"-" }}</td>
+                      <td class="text-center">
+                        {% if is_email_master_owner %}
+                          <form method="post" action="{% url 'server:remove_contra_mestre' link.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                              <i class="bi bi-x-lg me-1"></i>{% trans "Remover" %}
+                            </button>
+                          </form>
+                        {% else %}
+                          <span class="text-muted">—</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="p-4 text-center cta-muted">
+              {% trans "Nenhum contra mestre ativo ainda." %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card neon-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">{% trans "Contas delegadas para você" %}</h5>
+          <span class="badge bg-secondary">{{ links_as_manager|length }}</span>
+        </div>
+        <div class="card-body p-0">
+          {% if links_as_manager %}
+            <div class="table-responsive table-dark-glass">
+              <table class="table mb-0 align-middle">
+                <thead>
+                  <tr>
+                    <th>{% trans "Conta" %}</th>
+                    <th>{% trans "Delegado por" %}</th>
+                    <th>{% trans "Observações" %}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for link in links_as_manager %}
+                    <tr>
+                      <td>{{ link.account_login }}</td>
+                      <td>{{ link.created_by.username|default:"-" }}</td>
+                      <td>{{ link.notes|default:"-" }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="p-4 text-center cta-muted">
+              {% trans "Nenhuma conta delegada para o seu usuário." %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

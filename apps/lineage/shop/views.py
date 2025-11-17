@@ -13,6 +13,10 @@ from django.core.paginator import Paginator
 from apps.main.home.models import PerfilGamer
 
 from utils.dynamic_import import get_query_class
+from apps.lineage.server.services.account_context import (
+    get_active_login,
+    get_lineage_template_context,
+)
 LineageServices = get_query_class("LineageServices")
 
 
@@ -44,7 +48,7 @@ def view_cart(request):
     
     # Buscar personagens do usuário
     try:
-        personagens = LineageServices.find_chars(request.user.username)
+        personagens = LineageServices.find_chars(get_active_login(request))
     except Exception as e:
         personagens = []
         messages.warning(request, 'Erro ao carregar personagens. Tente novamente.')
@@ -59,6 +63,7 @@ def view_cart(request):
         'valor_bonus_usado': valor_bonus_usado,
         'valor_dinheiro_usado': valor_dinheiro_usado,
     }
+    context.update(get_lineage_template_context(request))
     
     return render(request, 'shop/cart.html', context)
 
@@ -156,6 +161,7 @@ def apply_promo_code(request):
 def checkout(request):
     cart, created = Cart.objects.get_or_create(user=request.user)
     wallet, created = Wallet.objects.get_or_create(usuario=request.user)
+    active_login = get_active_login(request)
 
     total = cart.calcular_total()
     valor_bonus_usado, valor_dinheiro_usado = cart.calcular_pagamento_misto(wallet.saldo_bonus)
@@ -180,7 +186,7 @@ def checkout(request):
 
     # Verificar se o personagem existe na conta do usuário
     try:
-        personagens = LineageServices.find_chars(request.user.username)
+        personagens = LineageServices.find_chars(active_login)
         personagem_existe = any(p['char_name'] == personagem for p in personagens)
         if not personagem_existe:
             messages.error(request, _('Este personagem não existe na sua conta.'))
@@ -222,7 +228,7 @@ def checkout(request):
             # Se o inventário não existir, será criado automaticamente
             inventory, created = Inventory.objects.get_or_create(
                 user=request.user,
-                account_name=request.user.username,
+                account_name=active_login,
                 character_name=personagem
             )
 
