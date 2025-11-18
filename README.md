@@ -1,4 +1,4 @@
-# Painel Definitivo Lineage [1.15](https://pdl.denky.dev.br)
+# Painel Definitivo Lineage [1.16](https://pdl.denky.dev.br)
 
 <img align="right" height="180" src="https://i.imgur.com/0tL4OQ7.png"/>
 
