@@ -606,8 +606,27 @@
               </div>
             </div>
 
+            <!-- Conta Desvinculada Warning -->
+            {% if not account_is_linked and original_email_master_owner and original_email_master_owner.username != user.username %}
+              <div class="info-section">
+                <div class="alert alert-info" style="background: rgba(13, 202, 240, 0.2); border: 1px solid rgba(13, 202, 240, 0.5); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem;">
+                  <h6 style="color: #000000; font-weight: 600; margin-bottom: 0.75rem;">
+                    <i class="fas fa-info-circle me-2" style="color: #000000;"></i>{% trans "Conta Desvinculada" %}
+                  </h6>
+                  <p class="mb-0 mt-2" style="font-size: 0.9rem; color: #000000;">
+                    {% blocktrans with master=original_email_master_owner.username email=user.email %}
+                    Esta conta foi desvinculada do sistema. Embora o e-mail <strong style="color: #000000;">{{ email }}</strong> seja gerenciado pela conta mestre <strong style="color: #000000;">{{ master }}</strong>, esta conta do Lineage não está mais vinculada a nenhum usuário.
+                    {% endblocktrans %}
+                  </p>
+                  <p class="mb-0 mt-2" style="font-size: 0.85rem; opacity: 0.9; color: #000000;">
+                    {% trans "Para vincular novamente," %} <a href="{% url 'server:link_lineage_account' %}" class="text-decoration-underline" style="color: #0dcaf0;">{% trans "acesse a página de vinculação de contas" %}</a>.
+                  </p>
+                </div>
+              </div>
+            {% endif %}
+
             <!-- Email Master Owner Warning -->
-            {% if not is_email_master_owner and email_master_owner %}
+            {% if account_is_linked and not is_email_master_owner and email_master_owner %}
               <div class="info-section">
                 <div class="alert alert-warning" style="background: linear-gradient(135deg, #fff3cd, #ffeaa7); border: 2px solid #ffc107; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem;">
                   <h6 style="color: #856404; font-weight: 600; margin-bottom: 0.75rem;">

@@ -519,13 +519,40 @@ def manage_lineage_accounts(request):
                     "is_linked": True,  # Marca como vinculada automaticamente
                 })
 
+    # Verifica se a conta principal do usuário está realmente vinculada
+    # Se não estiver vinculada, não deve mostrar mensagem de conta mestre
+    account_is_linked = False
+    if LineageAccount and request.user.username:
+        try:
+            conta_data = LineageAccount.check_login_exists(request.user.username)
+            if conta_data and len(conta_data) > 0:
+                conta = conta_data[0]
+                linked_uuid = conta.get("linked_uuid") if isinstance(conta, dict) else getattr(conta, 'linked_uuid', None)
+                account_is_linked = bool(linked_uuid)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Erro ao verificar se conta principal está vinculada: {e}")
+    
     context = get_lineage_template_context(request)
+    
+    # Guarda o email_master_owner original antes de limpar (para mostrar mensagem de desvinculação)
+    original_email_master_owner = context.get('email_master_owner')
+    
+    # Se a conta não está vinculada, não mostra informações de conta mestre
+    # mas mantém a referência para mostrar mensagem de desvinculação
+    if not account_is_linked:
+        context['is_email_master_owner'] = True
+        # Não limpa email_master_owner, apenas marca que não está vinculada
+    
     context.update(
         {
             "delegated_links": delegated_links,
             "links_as_manager": links_as_manager,
             "linked_accounts_info": linked_accounts_info,  # Contas vinculadas automaticamente
             "total_delegated_accounts": len(links_as_manager) + len(linked_accounts_info),
+            "account_is_linked": account_is_linked,  # Flag para verificar se conta está vinculada
+            "original_email_master_owner": original_email_master_owner,  # Para mostrar mensagem de desvinculação
         }
     )
     return render(request, "l2_accounts/manage_accounts.html", context)

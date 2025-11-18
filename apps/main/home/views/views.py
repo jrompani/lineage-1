@@ -205,6 +205,9 @@ def index(request):
 
 @conditional_otp_required
 def profile(request):
+    import logging
+    logger = logging.getLogger(__name__)
+    
     # Informações sobre o email master owner
     email_master_owner = None
     is_email_master_owner = True
@@ -213,11 +216,35 @@ def profile(request):
         email_master_owner = request.user.get_email_master_owner()
         is_email_master_owner = request.user.is_email_master_owner
     
+    # Verifica se a conta principal do usuário está realmente vinculada
+    account_is_linked = False
+    original_email_master_owner = email_master_owner
+    
+    try:
+        from utils.dynamic_import import get_query_class
+        LineageAccount = get_query_class("LineageAccount")
+        
+        if LineageAccount and request.user.username:
+            conta_data = LineageAccount.check_login_exists(request.user.username)
+            if conta_data and len(conta_data) > 0:
+                conta = conta_data[0]
+                linked_uuid = conta.get("linked_uuid") if isinstance(conta, dict) else getattr(conta, 'linked_uuid', None)
+                account_is_linked = bool(linked_uuid)
+    except Exception as e:
+        logger.warning(f"Erro ao verificar se conta principal está vinculada: {e}")
+    
+    # Se a conta não está vinculada, não mostra informações de conta mestre
+    # mas mantém a referência para mostrar mensagem de desvinculação
+    if not account_is_linked:
+        is_email_master_owner = True
+    
     context = {
         'segment': 'profile',
         'parent': 'home',
-        'email_master_owner': email_master_owner,
+        'email_master_owner': email_master_owner if account_is_linked else None,
         'is_email_master_owner': is_email_master_owner,
+        'account_is_linked': account_is_linked,
+        'original_email_master_owner': original_email_master_owner,  # Para mostrar mensagem de desvinculação
     }
     return render(request, 'pages/profile.html', context)
 

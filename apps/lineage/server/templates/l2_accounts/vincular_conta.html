@@ -136,24 +136,64 @@
     padding: 1rem;
     margin-top: 1.5rem;
     text-align: center;
+    color: #ffffff;
   }
 
   .info-text small {
-    color: rgba(255, 255, 255, 0.8);
+    color: #f8fafc;
     display: block;
     margin-bottom: 0.5rem;
   }
 
   .info-text a {
-    color: #6f42c1;
+    color: #0dcaf0;
     text-decoration: none;
     font-weight: 600;
     transition: color 0.3s ease;
   }
 
   .info-text a:hover {
-    color: #e83e8c;
+    color: #ffffff;
     text-decoration: underline;
+  }
+
+  /* Estilos para mensagens de alerta */
+  .alert {
+    color: #ffffff;
+  }
+
+  .alert strong {
+    color: #ffffff;
+  }
+
+  .alert p {
+    color: #ffffff;
+  }
+
+  .alert small {
+    color: #f8fafc;
+  }
+
+  .btn-email-code {
+    background: linear-gradient(135deg, #0dcaf0 0%, #17a2b8 100%);
+    border: none;
+    border-radius: 12px;
+    padding: 0.75rem 2rem;
+    color: #ffffff;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(13, 202, 240, 0.3);
+  }
+
+  .btn-email-code:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(13, 202, 240, 0.4);
+    background: linear-gradient(135deg, #0aa2c0 0%, #138496 100%);
+    color: #ffffff;
+  }
+
+  .btn-email-code:active {
+    transform: translateY(0);
   }
 
   @keyframes fadeInUp {
@@ -203,12 +243,12 @@
 
           {% if has_pending_code %}
           <div class="alert alert-info" style="background: rgba(13, 202, 240, 0.2); border: 1px solid rgba(13, 202, 240, 0.5); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem;">
-            <i class="fas fa-envelope me-2"></i>
-            <strong>{% trans "Código enviado!" %}</strong>
-            <p class="mb-0 mt-2" style="font-size: 0.9rem;">
-              {% blocktrans with email=code_email %}Um código de verificação foi enviado para <strong>{{ email }}</strong>.{% endblocktrans %}
+            <i class="fas fa-envelope me-2" style="color: #ffffff;"></i>
+            <strong style="color: #ffffff;">{% trans "Código enviado!" %}</strong>
+            <p class="mb-0 mt-2" style="font-size: 0.9rem; color: #ffffff;">
+              {% blocktrans with email=code_email %}Um código de verificação foi enviado para <strong style="color: #ffffff;">{{ email }}</strong>.{% endblocktrans %}
               <br>
-              <small>{% trans "O código é válido por 10 minutos." %}</small>
+              <small style="color: #f8fafc;">{% trans "O código é válido por 10 minutos." %}</small>
             </p>
           </div>
           {% endif %}
@@ -245,7 +285,7 @@
                 {% trans "Código de Verificação" %}
               </label>
               <input type="text" name="verification_code" class="form-control" id="verification_code" placeholder="{% trans 'Digite o código de 6 dígitos' %}" maxlength="6" pattern="[0-9]{6}" required>
-              <small class="text-muted mt-1 d-block">
+              <small class="mt-1 d-block" style="color: #f8fafc;">
                 {% trans "Digite o código de 6 dígitos enviado para seu e-mail." %}
               </small>
             </div>
@@ -259,11 +299,11 @@
             </div>
           </form>
 
-          <div class="text-center mt-3">
+          <div class="text-center mt-4">
             <form method="post" class="d-inline">
               {% csrf_token %}
               <input type="hidden" name="action" value="request_code">
-              <button type="submit" class="btn btn-outline-light btn-sm">
+              <button type="submit" class="btn btn-email-code">
                 <i class="fas fa-envelope me-2"></i>
                 {% trans "Enviar código por e-mail" %}
               </button>

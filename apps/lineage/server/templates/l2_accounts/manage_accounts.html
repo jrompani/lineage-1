@@ -159,14 +159,27 @@
             </span>
           </div>
         </div>
-        {% if email_master_owner and email_master_owner.username != request.user.username %}
+        {% if not account_is_linked and original_email_master_owner and original_email_master_owner.username != request.user.username %}
+        <div class="alert alert-info mt-4 mb-0 position-relative z-1" style="background: rgba(13, 202, 240, 0.2); border: 1px solid rgba(13, 202, 240, 0.5); border-radius: 12px; padding: 1rem;">
+          <i class="bi bi-info-circle me-2" style="color: #ffffff;"></i>
+          <strong style="color: #ffffff;">{% trans "Conta Desvinculada" %}</strong>
+          <p class="mb-0 mt-2" style="font-size: 0.9rem; color: #f8fafc;">
+            {% blocktrans with master=original_email_master_owner.username email=request.user.email %}
+            Esta conta foi desvinculada do sistema. Embora o e-mail <strong style="color: #ffffff;">{{ email }}</strong> seja gerenciado pela conta mestre <strong style="color: #ffffff;">{{ master }}</strong>, esta conta do Lineage não está mais vinculada a nenhum usuário.
+            {% endblocktrans %}
+          </p>
+          <p class="mb-0 mt-2" style="font-size: 0.85rem; opacity: 0.9; color: #f8fafc;">
+            {% trans "Para vincular novamente," %} <a href="{% url 'server:link_lineage_account' %}" class="text-decoration-underline" style="color: #0dcaf0;">{% trans "acesse a página de vinculação de contas" %}</a>.
+          </p>
+        </div>
+        {% elif account_is_linked and email_master_owner and email_master_owner.username != request.user.username %}
         <div class="alert alert-warning mt-4 mb-0 position-relative z-1">
           <i class="bi bi-link-45deg me-2"></i>
           {% blocktrans with master=email_master_owner.username %}
           Esta conta está vinculada à conta mestre {{ master }}. Apenas a conta mestre pode delegar novos acessos.
           {% endblocktrans %}
         </div>
-        {% elif is_email_master_owner and request.user.email %}
+        {% elif account_is_linked and is_email_master_owner and request.user.email %}
         <div class="alert mt-4 mb-0 position-relative z-1" style="background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 1rem;">
           <i class="bi bi-crown-fill me-2" style="color: #ffffff;"></i>
           <strong style="color: #ffffff;">{% trans "Você é a Conta Mestre" %}</strong>
@@ -219,7 +232,7 @@
           <h5 class="mb-0">{% trans "Delegar contra mestre" %}</h5>
         </div>
         <div class="card-body">
-          {% if is_email_master_owner %}
+          {% if account_is_linked and is_email_master_owner %}
           <form method="post" action="{% url 'server:add_contra_mestre' %}" class="row g-3">
             {% csrf_token %}
             <div class="col-12">
@@ -280,7 +293,7 @@
                       <td>{{ link.manager_user.username }}</td>
                       <td>{{ link.notes|default:"-" }}</td>
                       <td class="text-center">
-                        {% if is_email_master_owner %}
+                        {% if account_is_linked and is_email_master_owner %}
                           <form method="post" action="{% url 'server:remove_contra_mestre' link.id %}" class="d-inline">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-outline-danger">
