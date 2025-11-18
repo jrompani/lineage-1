@@ -518,15 +518,24 @@ def unlink_lineage_account(request):
         
         logger.info(f"[unlink_lineage_account] Desvinculando conta {account_login} do UUID {user_uuid}")
         
+        # Verifica se a conta que está sendo desvinculada é a conta ativa
+        active_login = get_active_login(request)
+        was_active = (active_login == account_login)
+        
         success = LineageAccount.unlink_account_from_user(account_login, user_uuid)
         
         if success:
-            # Se a conta desvinculada era a ativa, redefine para a conta principal
-            active_login = get_active_login(request)
-            if active_login == account_login:
+            # Se a conta desvinculada era a ativa, redefine para a conta principal ANTES de qualquer outra coisa
+            if was_active:
+                logger.info(f"[unlink_lineage_account] Conta ativa {account_login} foi desvinculada, redefinindo para conta principal")
                 set_active_login(request, request.user.username)
+                messages.warning(
+                    request, 
+                    _("Conta %(account)s desvinculada com sucesso. Como ela estava ativa, a conta principal foi definida como ativa.") % {"account": account_login}
+                )
+            else:
+                messages.success(request, _("Conta %(account)s desvinculada com sucesso.") % {"account": account_login})
             
-            messages.success(request, _("Conta %(account)s desvinculada com sucesso.") % {"account": account_login})
             logger.info(f"[unlink_lineage_account] Conta {account_login} desvinculada com sucesso")
         else:
             messages.error(request, _("Não foi possível desvincular a conta. Verifique se ela está vinculada ao seu usuário."))
