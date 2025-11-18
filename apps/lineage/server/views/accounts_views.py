@@ -489,16 +489,43 @@ def manage_lineage_accounts(request):
             role_label = account.get("role_label", "")
             
             # Verifica se a conta realmente está vinculada (tem linked_uuid)
-            if login and LineageAccount:
+            # Usa SQL direto para evitar cache
+            if login:
                 try:
-                    conta_data = LineageAccount.check_login_exists(login)
-                    if conta_data and len(conta_data) > 0:
-                        conta = conta_data[0]
-                        linked_uuid = conta.get("linked_uuid") if isinstance(conta, dict) else getattr(conta, 'linked_uuid', None)
-                        
-                        # Se não tem linked_uuid, não adiciona (foi desvinculada)
-                        if not linked_uuid:
-                            continue
+                    from utils.dynamic_import import get_query_class
+                    LineageDBClass = get_query_class("LineageDB")
+                    
+                    if LineageDBClass:
+                        lineage_db = LineageDBClass()
+                        if lineage_db and getattr(lineage_db, 'enabled', False):
+                            sql = """
+                                SELECT login, linked_uuid, email
+                                FROM accounts
+                                WHERE login = :login
+                                LIMIT 1
+                            """
+                            result = lineage_db.select(sql, {"login": login})
+                            if result and len(result) > 0:
+                                conta = result[0]
+                                linked_uuid = conta.get("linked_uuid") if isinstance(conta, dict) else getattr(conta, 'linked_uuid', None)
+                                
+                                # Se não tem linked_uuid, não adiciona (foi desvinculada)
+                                if not linked_uuid:
+                                    continue
+                            else:
+                                # Conta não encontrada no banco
+                                continue
+                    else:
+                        # Fallback: usa check_login_exists se LineageDB não estiver disponível
+                        if LineageAccount:
+                            conta_data = LineageAccount.check_login_exists(login)
+                            if conta_data and len(conta_data) > 0:
+                                conta = conta_data[0]
+                                linked_uuid = conta.get("linked_uuid") if isinstance(conta, dict) else getattr(conta, 'linked_uuid', None)
+                                if not linked_uuid:
+                                    continue
+                            else:
+                                continue
                 except Exception as e:
                     import logging
                     logger = logging.getLogger(__name__)
@@ -521,14 +548,35 @@ def manage_lineage_accounts(request):
 
     # Verifica se a conta principal do usuário está realmente vinculada
     # Se não estiver vinculada, não deve mostrar mensagem de conta mestre
+    # Usa SQL direto para evitar cache
     account_is_linked = False
-    if LineageAccount and request.user.username:
+    if request.user.username:
         try:
-            conta_data = LineageAccount.check_login_exists(request.user.username)
-            if conta_data and len(conta_data) > 0:
-                conta = conta_data[0]
-                linked_uuid = conta.get("linked_uuid") if isinstance(conta, dict) else getattr(conta, 'linked_uuid', None)
-                account_is_linked = bool(linked_uuid)
+            from utils.dynamic_import import get_query_class
+            LineageDBClass = get_query_class("LineageDB")
+            
+            if LineageDBClass:
+                lineage_db = LineageDBClass()
+                if lineage_db and getattr(lineage_db, 'enabled', False):
+                    sql = """
+                        SELECT login, linked_uuid, email
+                        FROM accounts
+                        WHERE login = :login
+                        LIMIT 1
+                    """
+                    result = lineage_db.select(sql, {"login": request.user.username})
+                    if result and len(result) > 0:
+                        conta = result[0]
+                        linked_uuid = conta.get("linked_uuid") if isinstance(conta, dict) else getattr(conta, 'linked_uuid', None)
+                        account_is_linked = bool(linked_uuid)
+            else:
+                # Fallback: usa check_login_exists se LineageDB não estiver disponível
+                if LineageAccount:
+                    conta_data = LineageAccount.check_login_exists(request.user.username)
+                    if conta_data and len(conta_data) > 0:
+                        conta = conta_data[0]
+                        linked_uuid = conta.get("linked_uuid") if isinstance(conta, dict) else getattr(conta, 'linked_uuid', None)
+                        account_is_linked = bool(linked_uuid)
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)

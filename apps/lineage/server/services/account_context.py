@@ -150,46 +150,82 @@ def get_available_accounts(user) -> List[Dict[str, str]]:
                 if lineage_db and getattr(lineage_db, 'enabled', False):
                     # Se for conta mestre, busca contas por e-mail também
                     # MAS apenas as que estão vinculadas (têm linked_uuid)
-                    if is_master and user_email and LineageAccount and hasattr(LineageAccount, 'find_accounts_by_email'):
+                    # Usa SQL direto para evitar cache
+                    if is_master and user_email:
                         try:
-                            # Busca todas as contas do Lineage com o mesmo e-mail
-                            contas_por_email = LineageAccount.find_accounts_by_email(user_email)
+                            import logging
+                            logger = logging.getLogger(__name__)
+                            logger.info(f"[get_available_accounts] Buscando contas por email (SQL direto): {user_email}")
+                            
+                            # Busca diretamente no banco para evitar cache
+                            sql = """
+                                SELECT login, linked_uuid, email
+                                FROM accounts
+                                WHERE email = :email
+                            """
+                            contas_por_email = lineage_db.select(sql, {"email": user_email})
+                            logger.info(f"[get_available_accounts] Contas encontradas por email: {len(contas_por_email) if contas_por_email else 0}")
+                            
                             for conta in contas_por_email:
                                 login = conta.get("login") if isinstance(conta, dict) else getattr(conta, 'login', None)
                                 linked_uuid = conta.get("linked_uuid") if isinstance(conta, dict) else getattr(conta, 'linked_uuid', None)
+                                email = conta.get("email") if isinstance(conta, dict) else getattr(conta, 'email', None)
+                                
+                                logger.info(f"[get_available_accounts] Conta encontrada: login={login}, linked_uuid={linked_uuid}, email={email}")
                                 
                                 # Só adiciona se tiver linked_uuid definido (está vinculada)
                                 if login and login != default_login and linked_uuid:
                                     linked_accounts.add(login)
+                                    logger.info(f"[get_available_accounts] Adicionando conta {login} à lista de contas disponíveis")
+                                elif login and login != default_login and not linked_uuid:
+                                    logger.info(f"[get_available_accounts] Conta {login} não está vinculada (linked_uuid é NULL), não adicionando")
                         except Exception as e:
                             import logging
                             logger = logging.getLogger(__name__)
-                            logger.warning(f"Erro ao buscar contas por e-mail: {e}")
+                            logger.error(f"Erro ao buscar contas por e-mail: {e}", exc_info=True)
                     
                     # Busca contas vinculadas ao UUID do usuário
+                    # Busca também linked_uuid e email para logging e validação
                     sql = """
-                        SELECT login
+                        SELECT login, linked_uuid, email
                         FROM accounts
                         WHERE linked_uuid = :uuid
                     """
                     try:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.info(f"[get_available_accounts] Buscando contas vinculadas ao UUID: {user_uuid}")
                         result = lineage_db.select(sql, {"uuid": user_uuid})
+                        logger.info(f"[get_available_accounts] Contas encontradas por UUID: {len(result) if result else 0}")
+                        
                         if result:
                             for row in result:
-                                # Tenta diferentes formas de acessar o login
+                                # Tenta diferentes formas de acessar os campos
                                 login = None
+                                linked_uuid = None
+                                email = None
+                                
                                 if isinstance(row, dict):
                                     login = row.get("login")
+                                    linked_uuid = row.get("linked_uuid")
+                                    email = row.get("email")
                                 elif hasattr(row, 'login'):
                                     login = getattr(row, 'login', None)
+                                    linked_uuid = getattr(row, 'linked_uuid', None)
+                                    email = getattr(row, 'email', None)
                                 elif hasattr(row, '__getitem__'):
                                     try:
                                         login = row['login']
+                                        linked_uuid = row.get('linked_uuid')
+                                        email = row.get('email')
                                     except (KeyError, TypeError):
                                         pass
                                 
+                                logger.info(f"[get_available_accounts] Conta encontrada por UUID: login={login}, linked_uuid={linked_uuid}, email={email}")
+                                
                                 if login and login != default_login:  # Evita duplicar a conta principal
                                     linked_accounts.add(login)
+                                    logger.info(f"[get_available_accounts] Adicionando conta {login} à lista (via UUID)")
                     except Exception as e:
                         import logging
                         logger = logging.getLogger(__name__)
