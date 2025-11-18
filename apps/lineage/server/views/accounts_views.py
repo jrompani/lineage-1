@@ -194,26 +194,100 @@ def register_lineage_account(request):
             messages.error(request, "As senhas não coincidem.")
             return redirect('server:lineage_register')
 
-        success = LineageAccount.register(
-            login=user.username,
-            password=password,
-            access_level=0,
-            email=user.email
-        )
+        try:
+            success = LineageAccount.register(
+                login=user.username,
+                password=password,
+                access_level=0,
+                email=user.email
+            )
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[register_lineage_account] Erro ao registrar conta no banco do Lineage: {e}", exc_info=True)
+            messages.error(request, "Erro ao criar conta. O banco de dados do Lineage pode estar indisponível.")
+            return redirect('server:lineage_register')
 
         if success:
+            # Verifica se o email tem uma conta mestre verificada
+            user_email = request.user.email
+            user_login = request.user.username
+            master_user = None
+            master_uuid = None
+            
+            if user_email and request.user.is_email_verified:
+                try:
+                    from apps.main.home.models import EmailOwnership
+                    email_ownership = EmailOwnership.objects.filter(email=user_email).first()
+                    
+                    if email_ownership:
+                        master_user = email_ownership.owner
+                        master_uuid = str(master_user.uuid) if hasattr(master_user, 'uuid') else None
+                        
+                        # Se o usuário atual não é o mestre, vincula ao mestre
+                        if master_user != request.user and master_uuid:
+                            # Verifica limite de slots antes de vincular
+                            from apps.lineage.server.services.account_context import can_link_account
+                            can_link, error_message = can_link_account(master_user)
+                            
+                            if not can_link:
+                                import logging
+                                logger = logging.getLogger(__name__)
+                                logger.warning(f"[register_lineage_account] Limite de slots atingido para {master_user.username}: {error_message}")
+                                messages.warning(
+                                    request,
+                                    f"⚠️ Conta criada, mas não foi possível vincular automaticamente. {error_message}"
+                                )
+                                return redirect('server:register_success')
+                            
+                            # Vincula ao UUID da conta mestre
+                            user_uuid = master_uuid
+                        else:
+                            # Usuário é o mestre ou não tem mestre, vincula ao próprio UUID
+                            user_uuid = str(request.user.uuid)
+                    else:
+                        # Não tem conta mestre, vincula ao próprio UUID
+                        user_uuid = str(request.user.uuid)
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"[register_lineage_account] Erro ao verificar conta mestre no registro: {e}", exc_info=True)
+                    # Em caso de erro, vincula ao próprio UUID
+                    user_uuid = str(request.user.uuid)
+            else:
+                # Email não verificado ou não tem email, vincula ao próprio UUID
+                user_uuid = str(request.user.uuid)
+            
             # Vincula automaticamente a conta após o registro
-            user_uuid = str(request.user.uuid)  # Certifique-se de que o User tem um campo `uuid`
-            success_link = LineageAccount.link_account_to_user(user.username, user_uuid)
+            try:
+                success_link = LineageAccount.link_account_to_user(user_login, user_uuid)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"[register_lineage_account] Erro ao vincular conta no banco do Lineage: {e}", exc_info=True)
+                messages.warning(
+                    request,
+                    "Conta criada com sucesso, mas houve um problema ao vincular automaticamente. Você pode vincular manualmente depois."
+                )
+                return redirect('server:register_success')
 
-            if success_link:
-                messages.success(request, "Conta Lineage criada e vinculada com sucesso!")
+            if success_link and success_link is not None:
+                if master_user and master_user != request.user:
+                    messages.success(
+                        request,
+                        f"Conta Lineage criada e vinculada automaticamente à conta mestre {master_user.username}!"
+                    )
+                else:
+                    messages.success(request, "Conta Lineage criada e vinculada com sucesso!")
                 return redirect('server:register_success')
             else:
-                messages.error(request, "Erro ao vincular a conta.")
-                return redirect('server:lineage_register')
+                messages.warning(
+                    request,
+                    "Conta criada com sucesso, mas houve um problema ao vincular automaticamente. Você pode vincular manualmente depois."
+                )
+                return redirect('server:register_success')
         else:
-            messages.error(request, "Erro ao criar conta.")
+            messages.error(request, "Erro ao criar conta. O banco de dados do Lineage pode estar indisponível.")
             return redirect('server:lineage_register')
 
     return render(request, 'l2_accounts/register.html', {
@@ -331,12 +405,31 @@ Equipe PDL""").format(username=request.user.username, code=verification_code),
             messages.error(request, _("Informe a senha da conta."))
             return redirect("server:link_lineage_account")
         
-        is_valided = LineageAccount.validate_credentials(login_jogo, senha_jogo)
+        try:
+            is_valided = LineageAccount.validate_credentials(login_jogo, senha_jogo)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[link_lineage_account] Erro ao validar credenciais no banco do Lineage: {e}", exc_info=True)
+            messages.error(request, _("Erro ao validar credenciais. O banco de dados do Lineage pode estar indisponível."))
+            return redirect("server:link_lineage_account")
+        
         if not is_valided:
             messages.error(request, _("Login ou senha incorretos."))
             return redirect("server:link_lineage_account")
         
-        conta = LineageAccount.get_account_by_login(login_jogo)
+        try:
+            conta = LineageAccount.get_account_by_login(login_jogo)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[link_lineage_account] Erro ao buscar conta no banco do Lineage: {e}", exc_info=True)
+            messages.error(request, _("Erro ao buscar conta. O banco de dados do Lineage pode estar indisponível."))
+            return redirect("server:link_lineage_account")
+
+        if not conta:
+            messages.error(request, _("Conta não encontrada."))
+            return redirect("server:link_lineage_account")
 
         # Já está vinculada?
         if conta.get("linked_uuid"):
@@ -352,7 +445,14 @@ Equipe PDL""").format(username=request.user.username, code=verification_code),
 
         # Vincula a conta
         user_uuid = str(request.user.uuid)
-        success = LineageAccount.link_account_to_user(login_jogo, user_uuid)
+        try:
+            success = LineageAccount.link_account_to_user(login_jogo, user_uuid)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[link_lineage_account] Erro ao vincular conta no banco do Lineage: {e}", exc_info=True)
+            messages.error(request, _("Erro ao vincular conta. O banco de dados do Lineage pode estar indisponível."))
+            return redirect("server:link_lineage_account")
         
         # Atualiza também o email na conta
         if success and request.user.email:
@@ -450,7 +550,15 @@ def link_by_email_token(request, token):
         messages.error(request, "Token inválido.")
         return redirect("server:request_link_by_email")
 
-    conta = LineageAccount.get_account_by_login_and_email(login, email)
+    try:
+        conta = LineageAccount.get_account_by_login_and_email(login, email)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"[link_by_email_token] Erro ao buscar conta no banco do Lineage: {e}", exc_info=True)
+        messages.error(request, "Erro ao buscar conta. O banco de dados do Lineage pode estar indisponível.")
+        return redirect("server:link_lineage_account")
+    
     if not conta or conta.get("linked_uuid"):
         messages.error(request, "Conta inválida ou já vinculada.")
         return redirect("server:link_lineage_account")
@@ -462,8 +570,16 @@ def link_by_email_token(request, token):
         messages.error(request, error_message)
         return redirect("server:link_lineage_account")
     
-    success = LineageAccount.link_account_to_user(login, str(request.user.uuid))
-    if success:
+    try:
+        success = LineageAccount.link_account_to_user(login, str(request.user.uuid))
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"[link_by_email_token] Erro ao vincular conta no banco do Lineage: {e}", exc_info=True)
+        messages.error(request, "Erro ao vincular conta. O banco de dados do Lineage pode estar indisponível.")
+        return redirect("server:link_lineage_account")
+    
+    if success and success is not None:
         messages.success(request, "Conta vinculada com sucesso!")
         return redirect("server:account_dashboard")
     else:

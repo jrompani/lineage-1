@@ -133,21 +133,90 @@ class RegisterLineageAccountAPI(APIView):
         confirm = request.data.get('confirm')
         if password != confirm:
             return Response({'error': 'As senhas não coincidem.'}, status=400)
-        success = LineageAccount.register(
-            login=user.username,
-            password=password,
-            access_level=0,
-            email=user.email
-        )
+        try:
+            success = LineageAccount.register(
+                login=user.username,
+                password=password,
+                access_level=0,
+                email=user.email
+            )
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[RegisterLineageAccountAPI] Erro ao registrar conta no banco do Lineage: {e}", exc_info=True)
+            return Response({'error': 'Erro ao criar conta. O banco de dados do Lineage pode estar indisponível.'}, status=503)
+        
         if success:
-            user_uuid = str(request.user.uuid)
-            success_link = LineageAccount.link_account_to_user(user.username, user_uuid)
-            if success_link:
-                return Response({'success': True})
+            # Verifica se o email tem uma conta mestre verificada
+            user_email = request.user.email
+            user_login = request.user.username
+            master_user = None
+            master_uuid = None
+            
+            if user_email and request.user.is_email_verified:
+                try:
+                    from apps.main.home.models import EmailOwnership
+                    email_ownership = EmailOwnership.objects.filter(email=user_email).first()
+                    
+                    if email_ownership:
+                        master_user = email_ownership.owner
+                        master_uuid = str(master_user.uuid) if hasattr(master_user, 'uuid') else None
+                        
+                        # Se o usuário atual não é o mestre, vincula ao mestre
+                        if master_user != request.user and master_uuid:
+                            # Verifica limite de slots antes de vincular
+                            from apps.lineage.server.services.account_context import can_link_account
+                            can_link, error_message = can_link_account(master_user)
+                            
+                            if not can_link:
+                                return Response({
+                                    'error': f'Conta criada, mas não foi possível vincular automaticamente. {error_message}',
+                                    'warning': True
+                                }, status=200)
+                            
+                            # Vincula ao UUID da conta mestre
+                            user_uuid = master_uuid
+                        else:
+                            # Usuário é o mestre ou não tem mestre, vincula ao próprio UUID
+                            user_uuid = str(request.user.uuid)
+                    else:
+                        # Não tem conta mestre, vincula ao próprio UUID
+                        user_uuid = str(request.user.uuid)
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"[RegisterLineageAccountAPI] Erro ao verificar conta mestre no registro: {e}", exc_info=True)
+                    # Em caso de erro, vincula ao próprio UUID
+                    user_uuid = str(request.user.uuid)
             else:
-                return Response({'error': 'Erro ao vincular a conta.'}, status=400)
+                # Email não verificado ou não tem email, vincula ao próprio UUID
+                user_uuid = str(request.user.uuid)
+            
+            try:
+                success_link = LineageAccount.link_account_to_user(user_login, user_uuid)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"[RegisterLineageAccountAPI] Erro ao vincular conta no banco do Lineage: {e}", exc_info=True)
+                return Response({
+                    'success': True,
+                    'warning': True,
+                    'message': 'Conta criada, mas houve um problema ao vincular automaticamente. Você pode vincular manualmente depois.'
+                }, status=200)
+            
+            if success_link and success_link is not None:
+                response_data = {'success': True}
+                if master_user and master_user != request.user:
+                    response_data['message'] = f'Conta vinculada automaticamente à conta mestre {master_user.username}'
+                return Response(response_data)
+            else:
+                return Response({
+                    'success': True,
+                    'warning': True,
+                    'message': 'Conta criada, mas houve um problema ao vincular automaticamente. Você pode vincular manualmente depois.'
+                }, status=200)
         else:
-            return Response({'error': 'Erro ao criar conta.'}, status=400)
+            return Response({'error': 'Erro ao criar conta. O banco de dados do Lineage pode estar indisponível.'}, status=503)
 
 class LinkLineageAccountAPI(APIView):
     permission_classes = [permissions.IsAuthenticated]
