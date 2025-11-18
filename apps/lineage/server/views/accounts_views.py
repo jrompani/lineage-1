@@ -460,6 +460,9 @@ def link_by_email_token(request, token):
 @conditional_otp_required
 @require_lineage_connection
 def manage_lineage_accounts(request):
+    from utils.dynamic_import import get_query_class
+    LineageAccount = get_query_class("LineageAccount")
+    
     # Contas delegadas pelo usuário atual (delegações explícitas)
     delegated_links = ManagedLineageAccount.objects.filter(
         created_by=request.user
@@ -484,6 +487,23 @@ def manage_lineage_accounts(request):
         if not account.get("is_primary") and not account.get("created_by"):
             login = account.get("login")
             role_label = account.get("role_label", "")
+            
+            # Verifica se a conta realmente está vinculada (tem linked_uuid)
+            if login and LineageAccount:
+                try:
+                    conta_data = LineageAccount.check_login_exists(login)
+                    if conta_data and len(conta_data) > 0:
+                        conta = conta_data[0]
+                        linked_uuid = conta.get("linked_uuid") if isinstance(conta, dict) else getattr(conta, 'linked_uuid', None)
+                        
+                        # Se não tem linked_uuid, não adiciona (foi desvinculada)
+                        if not linked_uuid:
+                            continue
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Erro ao verificar linked_uuid da conta {login}: {e}")
+                    continue
             
             # Verifica se já existe um ManagedLineageAccount para esta conta
             existing_link = ManagedLineageAccount.objects.filter(
@@ -628,7 +648,7 @@ def set_active_lineage_account(request):
 def unlink_lineage_account(request):
     """
     Desvincula uma conta do Lineage do UUID do usuário atual.
-    Remove o linked_uuid e o email da conta no banco do jogo.
+    Remove apenas o linked_uuid da conta no banco do jogo (o email não é alterado).
     """
     import logging
     logger = logging.getLogger(__name__)
@@ -657,39 +677,90 @@ def unlink_lineage_account(request):
             messages.error(request, _("Funcionalidade de desvinculação não disponível."))
             return redirect("server:manage_lineage_accounts")
         
-        user_uuid = str(request.user.uuid) if hasattr(request.user, 'uuid') else None
-        if not user_uuid:
-            messages.error(request, _("UUID do usuário não encontrado."))
-            return redirect("server:manage_lineage_accounts")
+        # Verifica se o usuário é o mestre do email
+        email_master_owner = None
+        if request.user.email:
+            email_master_owner = request.user.get_email_master_owner()
+        
+        # Determina qual UUID usar para desvincular
+        # Se for o mestre do email, usa o UUID do mestre
+        # Se não for, usa o UUID do usuário atual
+        if email_master_owner and email_master_owner != request.user:
+            # Usuário não é o mestre, mas pode ter acesso via delegação
+            # Verifica se a conta está vinculada ao UUID do mestre
+            master_uuid = str(email_master_owner.uuid) if hasattr(email_master_owner, 'uuid') else None
+            user_uuid = str(request.user.uuid) if hasattr(request.user, 'uuid') else None
+            
+            if not master_uuid:
+                messages.error(request, _("UUID do usuário mestre não encontrado."))
+                return redirect("server:manage_lineage_accounts")
+            
+            # Verifica se a conta está vinculada ao UUID do mestre
+            account_data = LineageAccount.check_login_exists(account_login)
+            if not account_data or len(account_data) == 0:
+                messages.error(request, _("Conta do Lineage não encontrada."))
+                logger.warning(f"[unlink_lineage_account] Conta {account_login} não encontrada no banco")
+                return redirect("server:manage_lineage_accounts")
+            
+            account = account_data[0]
+            current_linked_uuid = account.get("linked_uuid")
+            
+            if not current_linked_uuid:
+                messages.error(request, _("Esta conta não está vinculada a nenhum usuário."))
+                logger.warning(f"[unlink_lineage_account] Conta {account_login} não está vinculada (linked_uuid é None)")
+                return redirect("server:manage_lineage_accounts")
+            
+            current_linked_uuid_str = str(current_linked_uuid).strip()
+            master_uuid_str = str(master_uuid).strip()
+            
+            # Se a conta está vinculada ao mestre, usa o UUID do mestre para desvincular
+            if current_linked_uuid_str == master_uuid_str:
+                user_uuid = master_uuid
+                logger.info(f"[unlink_lineage_account] Usuário não é mestre, mas conta está vinculada ao mestre. Usando UUID do mestre: {user_uuid}")
+            elif user_uuid and current_linked_uuid_str == str(user_uuid).strip():
+                # Conta está vinculada ao UUID do usuário atual (não mestre)
+                logger.info(f"[unlink_lineage_account] Conta vinculada ao UUID do usuário atual (não mestre): {user_uuid}")
+            else:
+                messages.error(request, _("Esta conta está vinculada a outro usuário."))
+                logger.warning(f"[unlink_lineage_account] Conta {account_login} está vinculada a outro UUID: {current_linked_uuid_str}")
+                return redirect("server:manage_lineage_accounts")
+        else:
+            # Usuário é o mestre ou não tem mestre definido, usa o UUID do usuário atual
+            user_uuid = str(request.user.uuid) if hasattr(request.user, 'uuid') else None
+            if not user_uuid:
+                messages.error(request, _("UUID do usuário não encontrado."))
+                return redirect("server:manage_lineage_accounts")
+            
+            logger.info(f"[unlink_lineage_account] Usuário é mestre ou não tem mestre. Usando UUID do usuário atual: {user_uuid}")
+            
+            # Verifica se a conta realmente está vinculada ao UUID do usuário antes de tentar desvincular
+            account_data = LineageAccount.check_login_exists(account_login)
+            if not account_data or len(account_data) == 0:
+                messages.error(request, _("Conta do Lineage não encontrada."))
+                logger.warning(f"[unlink_lineage_account] Conta {account_login} não encontrada no banco")
+                return redirect("server:manage_lineage_accounts")
+            
+            account = account_data[0]
+            current_linked_uuid = account.get("linked_uuid")
+            
+            logger.info(f"[unlink_lineage_account] Conta {account_login} - linked_uuid atual: {current_linked_uuid}, user_uuid: {user_uuid}")
+            
+            # Verifica se a conta está vinculada ao UUID do usuário
+            if not current_linked_uuid:
+                messages.error(request, _("Esta conta não está vinculada a nenhum usuário."))
+                logger.warning(f"[unlink_lineage_account] Conta {account_login} não está vinculada (linked_uuid é None)")
+                return redirect("server:manage_lineage_accounts")
+            
+            # Normaliza os UUIDs para comparação (remove espaços, converte para string)
+            current_linked_uuid_str = str(current_linked_uuid).strip()
+            user_uuid_str = str(user_uuid).strip()
+            
+            if current_linked_uuid_str != user_uuid_str:
+                messages.error(request, _("Esta conta está vinculada a outro usuário (UUID: %(uuid)s).") % {"uuid": current_linked_uuid_str})
+                logger.warning(f"[unlink_lineage_account] Conta {account_login} está vinculada a outro UUID: {current_linked_uuid_str} != {user_uuid_str}")
+                return redirect("server:manage_lineage_accounts")
         
         logger.info(f"[unlink_lineage_account] Desvinculando conta {account_login} do UUID {user_uuid}")
-        
-        # Verifica se a conta realmente está vinculada ao UUID do usuário antes de tentar desvincular
-        account_data = LineageAccount.check_login_exists(account_login)
-        if not account_data or len(account_data) == 0:
-            messages.error(request, _("Conta do Lineage não encontrada."))
-            logger.warning(f"[unlink_lineage_account] Conta {account_login} não encontrada no banco")
-            return redirect("server:manage_lineage_accounts")
-        
-        account = account_data[0]
-        current_linked_uuid = account.get("linked_uuid")
-        
-        logger.info(f"[unlink_lineage_account] Conta {account_login} - linked_uuid atual: {current_linked_uuid}, user_uuid: {user_uuid}")
-        
-        # Verifica se a conta está vinculada ao UUID do usuário
-        if not current_linked_uuid:
-            messages.error(request, _("Esta conta não está vinculada a nenhum usuário."))
-            logger.warning(f"[unlink_lineage_account] Conta {account_login} não está vinculada (linked_uuid é None)")
-            return redirect("server:manage_lineage_accounts")
-        
-        # Normaliza os UUIDs para comparação (remove espaços, converte para string)
-        current_linked_uuid_str = str(current_linked_uuid).strip()
-        user_uuid_str = str(user_uuid).strip()
-        
-        if current_linked_uuid_str != user_uuid_str:
-            messages.error(request, _("Esta conta está vinculada a outro usuário (UUID: %(uuid)s).") % {"uuid": current_linked_uuid_str})
-            logger.warning(f"[unlink_lineage_account] Conta {account_login} está vinculada a outro UUID: {current_linked_uuid_str} != {user_uuid_str}")
-            return redirect("server:manage_lineage_accounts")
         
         # Verifica se a conta que está sendo desvinculada é a conta ativa
         active_login = get_active_login(request)

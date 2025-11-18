@@ -149,13 +149,17 @@ def get_available_accounts(user) -> List[Dict[str, str]]:
                 lineage_db = LineageDBClass()
                 if lineage_db and getattr(lineage_db, 'enabled', False):
                     # Se for conta mestre, busca contas por e-mail também
+                    # MAS apenas as que estão vinculadas (têm linked_uuid)
                     if is_master and user_email and LineageAccount and hasattr(LineageAccount, 'find_accounts_by_email'):
                         try:
                             # Busca todas as contas do Lineage com o mesmo e-mail
                             contas_por_email = LineageAccount.find_accounts_by_email(user_email)
                             for conta in contas_por_email:
                                 login = conta.get("login") if isinstance(conta, dict) else getattr(conta, 'login', None)
-                                if login and login != default_login:
+                                linked_uuid = conta.get("linked_uuid") if isinstance(conta, dict) else getattr(conta, 'linked_uuid', None)
+                                
+                                # Só adiciona se tiver linked_uuid definido (está vinculada)
+                                if login and login != default_login and linked_uuid:
                                     linked_accounts.add(login)
                         except Exception as e:
                             import logging

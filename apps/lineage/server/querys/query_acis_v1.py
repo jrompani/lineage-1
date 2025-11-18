@@ -559,21 +559,69 @@ class LineageAccount:
     def unlink_account_from_user(login, user_uuid):
         """
         Desvincula uma conta do Lineage de um UUID de usuário.
-        Remove o linked_uuid e o email da conta.
+        Remove apenas o linked_uuid da conta (o email não é alterado pois pode ser NOT NULL).
         """
         try:
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            # Normaliza o UUID para comparação
+            user_uuid_str = str(user_uuid).strip()
+            login_str = str(login).strip()
+            
+            logger.info(f"[unlink_account_from_user] Tentando desvincular conta {login_str} do UUID {user_uuid_str}")
+            
+            # Primeiro verifica se a conta existe e está vinculada
+            check_sql = """
+                SELECT login, linked_uuid, email
+                FROM accounts
+                WHERE login = :login
+            """
+            check_params = {"login": login_str}
+            check_result = LineageDB().select(check_sql, check_params)
+            
+            if not check_result or len(check_result) == 0:
+                logger.warning(f"[unlink_account_from_user] Conta {login_str} não encontrada")
+                return False
+            
+            account = check_result[0]
+            current_uuid = account.get("linked_uuid") if isinstance(account, dict) else getattr(account, 'linked_uuid', None)
+            
+            if current_uuid:
+                current_uuid_str = str(current_uuid).strip()
+                logger.info(f"[unlink_account_from_user] Conta {login_str} - linked_uuid atual: '{current_uuid_str}', esperado: '{user_uuid_str}'")
+                
+                if current_uuid_str != user_uuid_str:
+                    logger.warning(f"[unlink_account_from_user] UUID não corresponde: '{current_uuid_str}' != '{user_uuid_str}'")
+                    return False
+            else:
+                logger.warning(f"[unlink_account_from_user] Conta {login_str} não está vinculada (linked_uuid é NULL)")
+                return False
+            
+            # Agora faz o UPDATE - como já verificamos que está vinculada, podemos fazer direto
+            # Não setamos email = NULL porque o banco pode não permitir
             sql = """
                 UPDATE accounts
-                SET linked_uuid = NULL, email = NULL
-                WHERE login = :login AND linked_uuid = :uuid
+                SET linked_uuid = NULL
+                WHERE login = :login
             """
             params = {
-                "uuid": str(user_uuid),
-                "login": login
+                "login": login_str
             }
             result = LineageDB().update(sql, params)
-            return result is not None and result > 0
+            
+            logger.info(f"[unlink_account_from_user] Resultado do UPDATE: {result}")
+            
+            if result is not None and result > 0:
+                logger.info(f"[unlink_account_from_user] Conta {login_str} desvinculada com sucesso")
+                return True
+            else:
+                logger.warning(f"[unlink_account_from_user] UPDATE não afetou nenhuma linha para conta {login_str}")
+                return False
         except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[unlink_account_from_user] Erro ao desvincular conta Lineage do UUID: {e}", exc_info=True)
             print(f"Erro ao desvincular conta Lineage do UUID: {e}")
             return False
 
