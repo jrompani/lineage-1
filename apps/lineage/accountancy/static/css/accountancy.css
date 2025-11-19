@@ -98,6 +98,7 @@
   text-decoration: none;
 }
 
+/* Report Container Styles */
 .report-container {
   background: rgba(255, 255, 255, 0.98);
   border-radius: 20px;
@@ -109,7 +110,7 @@
 .report-header {
   background: linear-gradient(135deg, #28a745, #20c997);
   color: white;
-  padding: 2rem;
+  padding: 2.5rem;
   text-align: center;
 }
 
@@ -117,17 +118,166 @@
   font-size: 2rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
+  color: white;
 }
 
 .report-body {
   padding: 2rem;
 }
 
+/* Summary Cards - Enhanced Professional Design */
+.report-container .report-summary {
+  padding: 2.5rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-bottom: 3px solid #e9ecef;
+  position: relative;
+  overflow: hidden;
+}
+
+.report-container .report-summary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #28a745, #20c997, #17a2b8);
+}
+
+.report-container .summary-card {
+  background: #ffffff !important;
+  border-radius: 16px;
+  padding: 1.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 100%;
+  display: flex !important;
+  align-items: center;
+  gap: 1.25rem;
+  border: 1px solid #e9ecef;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.report-container .summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--card-color-start), var(--card-color-end));
+  transition: width 0.35s ease;
+  z-index: 0;
+}
+
+.report-container .summary-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: rgba(40, 167, 69, 0.3);
+}
+
+.report-container .summary-card:hover::before {
+  width: 6px;
+}
+
+.report-container .summary-icon {
+  width: 70px !important;
+  height: 70px !important;
+  border-radius: 16px;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  color: white !important;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 1;
+  transition: all 0.35s ease;
+}
+
+.report-container .summary-card:hover .summary-icon {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Icon Color Gradients - More Specific */
+.report-container .summary-icon.bg-primary { 
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+  --card-color-start: #007bff;
+  --card-color-end: #0056b3;
+}
+.report-container .summary-icon.bg-success { 
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%) !important;
+  --card-color-start: #28a745;
+  --card-color-end: #1e7e34;
+}
+.report-container .summary-icon.bg-info { 
+  background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%) !important;
+  --card-color-start: #17a2b8;
+  --card-color-end: #117a8b;
+}
+.report-container .summary-icon.bg-warning { 
+  background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
+  --card-color-start: #ffc107;
+  --card-color-end: #e0a800;
+}
+.report-container .summary-icon.bg-danger { 
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+  --card-color-start: #dc3545;
+  --card-color-end: #c82333;
+}
+.report-container .summary-icon.bg-secondary { 
+  background: linear-gradient(135deg, #6c757d 0%, #545b62 100%) !important;
+  --card-color-start: #6c757d;
+  --card-color-end: #545b62;
+}
+
+.report-container .summary-content {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.report-container .summary-label {
+  font-size: 0.75rem !important;
+  color: #6c757d !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.5rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.8px !important;
+  line-height: 1.3 !important;
+  display: block !important;
+  opacity: 1 !important;
+}
+
+.report-container .summary-value {
+  font-size: 1.75rem !important;
+  font-weight: 800 !important;
+  color: #212529 !important;
+  line-height: 1.2 !important;
+  margin: 0 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  letter-spacing: -0.5px !important;
+  display: block !important;
+  opacity: 1 !important;
+}
+
+.report-container .summary-card:hover .summary-value {
+  color: #28a745 !important;
+  transition: color 0.3s ease;
+}
+
+/* Table Styles */
 .report-table {
   background: white;
   border-radius: 15px;
   overflow: hidden;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  margin-bottom: 0;
 }
 
 .report-table thead {
@@ -137,22 +287,48 @@
 
 .report-table th {
   border: none;
-  padding: 1.5rem 1rem;
+  padding: 1.25rem 1rem;
   font-weight: 600;
   text-align: center;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .report-table td {
-  padding: 1.25rem 1rem;
+  padding: 1rem;
   border-bottom: 1px solid #e9ecef;
   text-align: center;
   vertical-align: middle;
+  font-size: 0.9rem;
+}
+
+.report-table tbody tr {
+  transition: all 0.2s ease;
 }
 
 .report-table tbody tr:hover {
   background: linear-gradient(135deg, rgba(40, 167, 69, 0.05), rgba(32, 201, 151, 0.05));
+  transform: scale(1.01);
 }
 
+.report-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Badge Styles */
+.report-table .badge {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Back Button */
 .report-back-button {
   background: linear-gradient(135deg, #6c757d, #495057);
   border: none;
@@ -174,6 +350,7 @@
   text-decoration: none;
 }
 
+/* Animations */
 @keyframes fadeInDown {
   0% { opacity: 0; transform: translateY(-30px); }
   100% { opacity: 1; transform: translateY(0); }
@@ -190,7 +367,7 @@
   100% { transform: scale(1); }
 }
 
-/* Melhorar legibilidade dos textos muted nos relatórios */
+/* Text Muted Improvements */
 .report-container .text-muted {
   color: #6c757d !important;
   font-weight: 500;
@@ -202,9 +379,107 @@
   opacity: 0.8;
 }
 
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .report-table th,
+  .report-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .summary-value {
+    font-size: 1.25rem;
+  }
+}
+
 @media (max-width: 768px) {
-  .accountancy-title { font-size: 2rem; }
-  .accountancy-card-header { padding: 1.5rem; }
-  .accountancy-card-body { padding: 1.5rem; }
-  .accountancy-button { padding: 1.25rem 1.5rem; font-size: 1rem; }
-} 
+  .accountancy-title { 
+    font-size: 2rem; 
+  }
+  
+  .accountancy-card-header { 
+    padding: 1.5rem; 
+  }
+  
+  .accountancy-card-body { 
+    padding: 1.5rem; 
+  }
+  
+  .accountancy-button { 
+    padding: 1.25rem 1.5rem; 
+    font-size: 1rem; 
+  }
+  
+  .report-header {
+    padding: 1.5rem;
+  }
+  
+  .report-title {
+    font-size: 1.5rem;
+  }
+  
+  .report-body {
+    padding: 1rem;
+  }
+  
+  .report-container .report-summary {
+    padding: 1.5rem 1rem;
+  }
+  
+  .report-container .summary-card {
+    padding: 1.5rem;
+    flex-direction: row !important;
+    text-align: left;
+    gap: 1rem;
+  }
+  
+  .report-container .summary-icon {
+    width: 60px !important;
+    height: 60px !important;
+    font-size: 1.5rem;
+  }
+  
+  .report-container .summary-value {
+    font-size: 1.5rem;
+  }
+  
+  .report-container .summary-label {
+    font-size: 0.7rem;
+  }
+  
+  .report-table {
+    font-size: 0.8rem;
+  }
+  
+  .report-table th,
+  .report-table td {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.75rem;
+  }
+  
+  .report-table .badge {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .accountancy-container {
+    padding: 1rem 0;
+  }
+  
+  .report-container {
+    border-radius: 15px;
+    margin-bottom: 1rem;
+  }
+  
+  .summary-card {
+    margin-bottom: 0.5rem;
+  }
+  
+  .report-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

@@ -4,6 +4,51 @@
 
 {% block extrastyle %}
 <link rel="stylesheet" href="{% static 'css/accountancy.css' %}">
+<style>
+  /* Fallback styles for summary cards */
+  .report-container .summary-card {
+    background: #ffffff !important;
+    border-radius: 16px !important;
+    padding: 1.75rem !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 1.25rem !important;
+    border: 1px solid #e9ecef !important;
+    margin-bottom: 0 !important;
+  }
+  .report-container .summary-icon {
+    width: 70px !important;
+    height: 70px !important;
+    border-radius: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.75rem !important;
+    color: white !important;
+    flex-shrink: 0 !important;
+  }
+  .report-container .summary-icon.bg-primary { background: linear-gradient(135deg, #007bff, #0056b3) !important; }
+  .report-container .summary-icon.bg-success { background: linear-gradient(135deg, #28a745, #1e7e34) !important; }
+  .report-container .summary-icon.bg-info { background: linear-gradient(135deg, #17a2b8, #117a8b) !important; }
+  .report-container .summary-icon.bg-warning { background: linear-gradient(135deg, #ffc107, #e0a800) !important; }
+  .report-container .summary-icon.bg-danger { background: linear-gradient(135deg, #dc3545, #c82333) !important; }
+  .report-container .summary-icon.bg-secondary { background: linear-gradient(135deg, #6c757d, #545b62) !important; }
+  .report-container .summary-label {
+    font-size: 0.75rem !important;
+    color: #6c757d !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    margin-bottom: 0.5rem !important;
+    display: block !important;
+  }
+  .report-container .summary-value {
+    font-size: 1.75rem !important;
+    font-weight: 800 !important;
+    color: #212529 !important;
+    display: block !important;
+  }
+</style>
 {% endblock extrastyle %}
 
 {% block breadcrumbs %}
@@ -31,6 +76,98 @@
             </p>
           </div>
           
+          {% if resumo %}
+          <div class="report-summary">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon bg-success">
+                    <i class="fas fa-arrow-up"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Total Entradas" %}</div>
+                    <div class="summary-value">R$ {{ resumo.total_entradas|floatformat:2 }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon bg-danger">
+                    <i class="fas fa-arrow-down"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Total Saídas" %}</div>
+                    <div class="summary-value">R$ {{ resumo.total_saidas|floatformat:2 }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon {% if resumo.saldo_final >= 0 %}bg-info{% else %}bg-warning{% endif %}">
+                    <i class="fas fa-balance-scale"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Saldo Final" %}</div>
+                    <div class="summary-value">R$ {{ resumo.saldo_final|floatformat:2 }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon bg-secondary">
+                    <i class="fas fa-calendar-alt"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Total de Dias" %}</div>
+                    <div class="summary-value">{{ resumo.total_dias }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="row g-3 mt-2">
+              <div class="col-md-4">
+                <div class="summary-card">
+                  <div class="summary-icon bg-info">
+                    <i class="fas fa-chart-line"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Média de Entradas/Dia" %}</div>
+                    <div class="summary-value">R$ {{ resumo.media_entradas|floatformat:2 }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="summary-card">
+                  <div class="summary-icon bg-warning">
+                    <i class="fas fa-chart-line"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Média de Saídas/Dia" %}</div>
+                    <div class="summary-value">R$ {{ resumo.media_saidas|floatformat:2 }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="summary-card">
+                  <div class="summary-icon bg-primary">
+                    <i class="fas fa-percent"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Taxa de Entrada/Saída" %}</div>
+                    <div class="summary-value">
+                      {% if resumo.total_saidas > 0 %}
+                        {{ resumo.taxa_entrada_saida|floatformat:2 }}x
+                      {% else %}
+                        ∞
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+          
           <div class="report-body">
             <div class="table-responsive">
               <table class="table report-table">
@@ -39,7 +176,12 @@
                     <th><i class="fas fa-calendar me-2"></i>{% trans "Data" %}</th>
                     <th><i class="fas fa-arrow-up me-2"></i>{% trans "Entradas" %}</th>
                     <th><i class="fas fa-arrow-down me-2"></i>{% trans "Saídas" %}</th>
-                    <th><i class="fas fa-balance-scale me-2"></i>{% trans "Saldo" %}</th>
+                    <th><i class="fas fa-balance-scale me-2"></i>{% trans "Saldo do Dia" %}</th>
+                    <th><i class="fas fa-chart-line me-2"></i>{% trans "Saldo Acumulado" %}</th>
+                    <th><i class="fas fa-exchange-alt me-2"></i>{% trans "Transações" %}</th>
+                    <th><i class="fas fa-arrow-up me-2"></i>{% trans "Nº Entradas" %}</th>
+                    <th><i class="fas fa-arrow-down me-2"></i>{% trans "Nº Saídas" %}</th>
+                    <th><i class="fas fa-percent me-2"></i>{% trans "% Variação" %}</th>
                     <th><i class="fas fa-chart-line me-2"></i>{% trans "Tendência" %}</th>
                   </tr>
                 </thead>
@@ -48,30 +190,76 @@
                   <tr>
                     <td>
                       <i class="fas fa-calendar-day me-2 text-primary"></i>
-                      {{ item.data }}
+                      <strong>{{ item.data|date:"d/m/Y" }}</strong>
                     </td>
                     <td>
                       <span class="badge bg-success">
                         <i class="fas fa-plus me-1"></i>
-                        R$ {{ item.entradas }}
+                        R$ {{ item.entradas|floatformat:2 }}
                       </span>
                     </td>
                     <td>
                       <span class="badge bg-danger">
                         <i class="fas fa-minus me-1"></i>
-                        R$ {{ item.saidas }}
+                        R$ {{ item.saidas|floatformat:2 }}
                       </span>
                     </td>
                     <td>
                       {% if item.saldo >= 0 %}
                         <span class="badge bg-info">
                           <i class="fas fa-dollar-sign me-1"></i>
-                          R$ {{ item.saldo }}
+                          R$ {{ item.saldo|floatformat:2 }}
                         </span>
                       {% else %}
                         <span class="badge bg-warning">
                           <i class="fas fa-exclamation-triangle me-1"></i>
-                          R$ {{ item.saldo }}
+                          R$ {{ item.saldo|floatformat:2 }}
+                        </span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if item.saldo_acumulado >= 0 %}
+                        <span class="badge bg-success">
+                          <i class="fas fa-chart-line me-1"></i>
+                          R$ {{ item.saldo_acumulado|floatformat:2 }}
+                        </span>
+                      {% else %}
+                        <span class="badge bg-danger">
+                          <i class="fas fa-exclamation-triangle me-1"></i>
+                          R$ {{ item.saldo_acumulado|floatformat:2 }}
+                        </span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <span class="badge bg-secondary">
+                        <i class="fas fa-exchange-alt me-1"></i>
+                        {{ item.num_transacoes }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge bg-success">
+                        <i class="fas fa-arrow-up me-1"></i>
+                        {{ item.num_entradas }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge bg-danger">
+                        <i class="fas fa-arrow-down me-1"></i>
+                        {{ item.num_saidas }}
+                      </span>
+                    </td>
+                    <td>
+                      {% if item.percentual_variacao == 0 %}
+                        <span class="badge bg-secondary">{{ item.percentual_variacao|floatformat:2 }}%</span>
+                      {% elif item.percentual_variacao > 0 %}
+                        <span class="badge bg-success">
+                          <i class="fas fa-arrow-up me-1"></i>
+                          +{{ item.percentual_variacao|floatformat:2 }}%
+                        </span>
+                      {% else %}
+                        <span class="badge bg-danger">
+                          <i class="fas fa-arrow-down me-1"></i>
+                          {{ item.percentual_variacao|floatformat:2 }}%
                         </span>
                       {% endif %}
                     </td>
@@ -96,7 +284,7 @@
                   </tr>
                   {% empty %}
                   <tr>
-                    <td colspan="5" class="text-center py-4">
+                    <td colspan="10" class="text-center py-4">
                       <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
                       <p class="text-muted">{% trans "Nenhum dado de fluxo de caixa disponível" %}</p>
                     </td>

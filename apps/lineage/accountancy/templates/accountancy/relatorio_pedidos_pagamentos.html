@@ -4,6 +4,51 @@
 
 {% block extrastyle %}
 <link rel="stylesheet" href="{% static 'css/accountancy.css' %}">
+<style>
+  /* Fallback styles for summary cards */
+  .report-container .summary-card {
+    background: #ffffff !important;
+    border-radius: 16px !important;
+    padding: 1.75rem !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 1.25rem !important;
+    border: 1px solid #e9ecef !important;
+    margin-bottom: 0 !important;
+  }
+  .report-container .summary-icon {
+    width: 70px !important;
+    height: 70px !important;
+    border-radius: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.75rem !important;
+    color: white !important;
+    flex-shrink: 0 !important;
+  }
+  .report-container .summary-icon.bg-primary { background: linear-gradient(135deg, #007bff, #0056b3) !important; }
+  .report-container .summary-icon.bg-success { background: linear-gradient(135deg, #28a745, #1e7e34) !important; }
+  .report-container .summary-icon.bg-info { background: linear-gradient(135deg, #17a2b8, #117a8b) !important; }
+  .report-container .summary-icon.bg-warning { background: linear-gradient(135deg, #ffc107, #e0a800) !important; }
+  .report-container .summary-icon.bg-danger { background: linear-gradient(135deg, #dc3545, #c82333) !important; }
+  .report-container .summary-icon.bg-secondary { background: linear-gradient(135deg, #6c757d, #545b62) !important; }
+  .report-container .summary-label {
+    font-size: 0.75rem !important;
+    color: #6c757d !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    margin-bottom: 0.5rem !important;
+    display: block !important;
+  }
+  .report-container .summary-value {
+    font-size: 1.75rem !important;
+    font-weight: 800 !important;
+    color: #212529 !important;
+    display: block !important;
+  }
+</style>
 {% endblock extrastyle %}
 
 {% block breadcrumbs %}
@@ -31,6 +76,103 @@
             </p>
           </div>
           
+          {% if resumo %}
+          <div class="report-summary">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon bg-primary">
+                    <i class="fas fa-shopping-cart"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Total de Pedidos" %}</div>
+                    <div class="summary-value">{{ resumo.total_pedidos }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon bg-success">
+                    <i class="fas fa-dollar-sign"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Total Pago" %}</div>
+                    <div class="summary-value">R$ {{ resumo.total_valor_pago|floatformat:2 }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon bg-warning">
+                    <i class="fas fa-gift"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Total Bônus" %}</div>
+                    <div class="summary-value">R$ {{ resumo.total_bonus|floatformat:2 }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon bg-info">
+                    <i class="fas fa-coins"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Total Creditado" %}</div>
+                    <div class="summary-value">R$ {{ resumo.total_creditado|floatformat:2 }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="row g-3 mt-2">
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon bg-secondary">
+                    <i class="fas fa-coins"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Total Moedas" %}</div>
+                    <div class="summary-value">{{ resumo.total_moedas|floatformat:2 }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon bg-info">
+                    <i class="fas fa-chart-bar"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Média por Pedido" %}</div>
+                    <div class="summary-value">R$ {{ resumo.media_valor|floatformat:2 }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon bg-success">
+                    <i class="fas fa-check-circle"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Aprovados" %}</div>
+                    <div class="summary-value">{{ resumo.status_contador.aprovado }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon bg-warning">
+                    <i class="fas fa-percent"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "% Bônus Geral" %}</div>
+                    <div class="summary-value">{{ resumo.percentual_bonus_geral|floatformat:2 }}%</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+          
           <div class="report-body">
             <div class="table-responsive">
               <table class="table report-table">
@@ -40,7 +182,9 @@
                     <th><i class="fas fa-user me-2"></i>{% trans "Usuário" %}</th>
                     <th><i class="fas fa-dollar-sign me-2"></i>{% trans "Valor Pago" %}</th>
                     <th><i class="fas fa-gift me-2"></i>{% trans "Bônus" %}</th>
+                    <th><i class="fas fa-percent me-2"></i>{% trans "% Bônus" %}</th>
                     <th><i class="fas fa-coins me-2"></i>{% trans "Total Creditado" %}</th>
+                    <th><i class="fas fa-coins me-2"></i>{% trans "Moedas Geradas" %}</th>
                     <th><i class="fas fa-calendar me-2"></i>{% trans "Data" %}</th>
                     <th><i class="fas fa-info-circle me-2"></i>{% trans "Status" %}</th>
                     <th><i class="fas fa-credit-card me-2"></i>{% trans "Método de Pagamento" %}</th>
@@ -57,19 +201,19 @@
                     </td>
                     <td>
                       <i class="fas fa-user-circle me-2 text-primary"></i>
-                      {{ item.usuario }}
+                      <strong>{{ item.usuario }}</strong>
                     </td>
                     <td>
                       <span class="badge bg-success">
                         <i class="fas fa-dollar-sign me-1"></i>
-                        R$ {{ item.valor }}
+                        R$ {{ item.valor|floatformat:2 }}
                       </span>
                     </td>
                     <td>
                       {% if item.bonus_aplicado > 0 %}
                         <span class="badge bg-warning">
                           <i class="fas fa-gift me-1"></i>
-                          R$ {{ item.bonus_aplicado }}
+                          R$ {{ item.bonus_aplicado|floatformat:2 }}
                         </span>
                       {% else %}
                         <span class="badge bg-secondary">
@@ -79,14 +223,32 @@
                       {% endif %}
                     </td>
                     <td>
+                      {% if item.percentual_bonus > 0 %}
+                        <span class="badge bg-info">
+                          <i class="fas fa-percent me-1"></i>
+                          {{ item.percentual_bonus|floatformat:2 }}%
+                        </span>
+                      {% else %}
+                        <span class="badge bg-secondary">0%</span>
+                      {% endif %}
+                    </td>
+                    <td>
                       <span class="badge bg-info">
                         <i class="fas fa-coins me-1"></i>
-                        R$ {{ item.total_creditado }}
+                        R$ {{ item.total_creditado|floatformat:2 }}
                       </span>
                     </td>
                     <td>
-                      <i class="fas fa-calendar-day me-2 text-info"></i>
-                      {{ item.data }}
+                      <span class="badge bg-secondary">
+                        <i class="fas fa-coins me-1"></i>
+                        {{ item.moedas_geradas|floatformat:2 }}
+                      </span>
+                    </td>
+                    <td>
+                      <small>
+                        <i class="fas fa-calendar-day me-1 text-info"></i>
+                        {{ item.data|date:"d/m/Y H:i" }}
+                      </small>
                     </td>
                     <td>
                       {% if item.status == 'aprovado' %}
@@ -142,7 +304,7 @@
                   </tr>
                   {% empty %}
                   <tr>
-                    <td colspan="8" class="text-center py-4">
+                    <td colspan="10" class="text-center py-4">
                       <i class="fas fa-credit-card fa-3x text-muted mb-3"></i>
                       <p class="text-muted">{% trans "Nenhum pedido ou pagamento encontrado" %}</p>
                     </td>
