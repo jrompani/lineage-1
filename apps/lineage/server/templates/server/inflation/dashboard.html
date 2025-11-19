@@ -1,0 +1,640 @@
+{% extends "layouts/base.html" %}
+{% load i18n static %}
+{% load itens_extras %}
+
+{% block title %}{% trans "Painel de Inflação de Itens" %}{% endblock %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'css/dashboard-custom.css' %}">
+<style>
+  .inflation-container {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 100vh;
+    padding: 2rem 0;
+  }
+
+  .inflation-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    text-align: center;
+  }
+
+  .inflation-header h1 {
+    color: white;
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    border-radius: 15px;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
+  }
+
+  .stat-card h3 {
+    color: #a0aec0;
+    margin-bottom: 1rem;
+    font-weight: 500;
+    font-size: 1rem;
+  }
+
+  .stat-value {
+    color: white;
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-create-snapshot {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .btn-create-snapshot:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(72, 187, 120, 0.4);
+  }
+
+  .table-container {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    overflow-x: auto;
+  }
+
+  .table {
+    width: 100%;
+    color: white;
+    border-collapse: collapse;
+  }
+
+  .table th {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .table td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .table tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .location-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 5px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .location-INVENTORY { background: #4299e1; }
+  .location-WAREHOUSE { background: #48bb78; }
+  .location-PAPERDOLL { background: #ed8936; }
+  .location-CLANWH { background: #9f7aea; }
+  .location-SITE { background: #f56565; }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .item-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .item-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+  }
+
+  .item-info-cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .item-name {
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .item-id {
+    color: #a0aec0;
+    font-size: 0.875rem;
+  }
+
+  /* Modal Styles */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 9999;
+    overflow-y: auto;
+    padding: 2rem;
+  }
+
+  .modal-overlay.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-content {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    border-radius: 20px;
+    padding: 2.5rem;
+    max-width: 800px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    position: relative;
+    color: white;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .modal-header h2 {
+    color: white;
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 600;
+  }
+
+  .modal-close {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+  }
+
+  .modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(90deg);
+  }
+
+  .modal-section {
+    margin-bottom: 2rem;
+  }
+
+  .modal-section h3 {
+    color: #667eea;
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .modal-section h3 i {
+    font-size: 1.5rem;
+  }
+
+  .modal-section p {
+    color: #a0aec0;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .modal-section ul {
+    color: #a0aec0;
+    line-height: 1.8;
+    padding-left: 1.5rem;
+  }
+
+  .modal-section ul li {
+    margin-bottom: 0.5rem;
+  }
+
+  .modal-section ul li strong {
+    color: white;
+  }
+
+  .feature-box {
+    background: rgba(0, 0, 0, 0.3);
+    border-left: 4px solid #667eea;
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+  }
+
+  .feature-box strong {
+    color: #667eea;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="inflation-container">
+  <div class="container">
+    <div class="inflation-header">
+      <h1>{% trans "Painel de Inflação de Itens" %}</h1>
+      <p style="color: rgba(255, 255, 255, 0.8); margin-top: 0.5rem;">
+        {% trans "Monitore a quantidade e distribuição de itens no servidor" %}
+      </p>
+    </div>
+
+    <div class="action-buttons">
+      <button class="btn-create-snapshot" onclick="createSnapshot()">
+        <i class="fas fa-camera"></i> {% trans "Criar Snapshot" %}
+      </button>
+      <a href="{% url 'server:inflation_comparison' %}" class="btn-create-snapshot" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); text-decoration: none; display: inline-block;">
+        <i class="fas fa-chart-line"></i> {% trans "Comparar Snapshots" %}
+      </a>
+      <a href="{% url 'server:inflation_categories' %}" class="btn-create-snapshot" style="background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); text-decoration: none; display: inline-block;">
+        <i class="fas fa-tags"></i> {% trans "Categorias" %}
+      </a>
+      <button class="btn-create-snapshot" onclick="openHelpModal()" style="background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);">
+        <i class="fas fa-question-circle"></i> {% trans "Como Funciona" %}
+      </button>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>{% trans "Total de Instâncias" %}</h3>
+        <p class="stat-value">{{ total_instances|floatformat:0 }}</p>
+        {% if last_snapshot %}
+        <small style="color: #a0aec0; font-size: 0.75rem;">
+          {% trans "Último snapshot" %}: {{ last_snapshot.total_items_instances|floatformat:0 }}
+        </small>
+        {% endif %}
+      </div>
+      <div class="stat-card">
+        <h3>{% trans "Total de Itens" %}</h3>
+        <p class="stat-value">{{ total_quantity|floatformat:0 }}</p>
+        {% if last_snapshot %}
+        <small style="color: #a0aec0; font-size: 0.75rem;">
+          {% trans "Último snapshot" %}: {{ last_snapshot.total_items_quantity|floatformat:0 }}
+        </small>
+        {% endif %}
+      </div>
+      <div class="stat-card">
+        <h3>{% trans "Personagens" %}</h3>
+        <p class="stat-value">{{ total_characters|default:0 }}</p>
+        {% if last_snapshot %}
+        <small style="color: #a0aec0; font-size: 0.75rem;">
+          {% trans "Último snapshot" %}: {{ last_snapshot.total_characters }}
+        </small>
+        {% endif %}
+      </div>
+      <div class="stat-card">
+        <h3>{% trans "Itens no Site" %}</h3>
+        <p class="stat-value">{{ site_items_count.total_quantity|default:0|floatformat:0 }}</p>
+        <small style="color: #a0aec0; font-size: 0.75rem;">
+          {% trans "Instâncias" %}: {{ site_items_count.total_items|default:0 }}
+        </small>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <h2 style="color: white; margin-bottom: 1.5rem;">{% trans "Resumo por Localização" %}</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>{% trans "Localização" %}</th>
+            <th>{% trans "Tipos de Itens Únicos" %}</th>
+            <th>{% trans "Total de Instâncias" %}</th>
+            <th>{% trans "Quantidade Total" %}</th>
+            <th>{% trans "Proprietários Únicos" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for location in location_summary %}
+          <tr>
+            <td>
+              <span class="location-badge location-{{ location.location }}">
+                {{ location.location }}
+              </span>
+            </td>
+            <td>{{ location.unique_item_types|default:0 }}</td>
+            <td>{{ location.total_instances|default:0|floatformat:0 }}</td>
+            <td>{{ location.total_quantity|default:0|floatformat:0 }}</td>
+            <td>{{ location.unique_owners|default:0 }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" style="text-align: center; color: #a0aec0;">
+              {% trans "Nenhum dado disponível. Crie um snapshot para começar." %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-container" style="margin-top: 2rem;">
+      <h2 style="color: white; margin-bottom: 1.5rem;">{% trans "Top 20 Itens Mais Comuns" %}</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>{% trans "Item" %}</th>
+            <th>{% trans "Quantidade Total" %}</th>
+            <th>{% trans "Proprietários Únicos" %}</th>
+            <th>{% trans "Instâncias" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in top_items %}
+          <tr>
+            <td>
+              <div class="item-row" style="border: none; padding: 0;">
+                <img src="{% item_image_url item.item_id %}" 
+                     alt="{{ item.item_name|default:'Item' }}" 
+                     class="item-icon">
+                <div class="item-info-cell">
+                  <span class="item-name">{{ item.item_name|default:"Item Desconhecido" }}</span>
+                  <span class="item-id">ID: {{ item.item_id }}</span>
+                </div>
+              </div>
+            </td>
+            <td>{{ item.total_quantity|default:0|floatformat:0 }}</td>
+            <td>{{ item.unique_owners|default:0 }}</td>
+            <td>{{ item.total_instances|default:0 }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" style="text-align: center; color: #a0aec0;">
+              {% trans "Nenhum dado disponível." %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if recent_snapshots %}
+    <div class="table-container" style="margin-top: 2rem;">
+      <h2 style="color: white; margin-bottom: 1.5rem;">{% trans "Snapshots Recentes" %}</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>{% trans "Data" %}</th>
+            <th>{% trans "Personagens" %}</th>
+            <th>{% trans "Instâncias" %}</th>
+            <th>{% trans "Quantidade Total" %}</th>
+            <th>{% trans "Ações" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for snapshot in recent_snapshots %}
+          <tr>
+            <td>{{ snapshot.snapshot_date|date:"d/m/Y" }}</td>
+            <td>{{ snapshot.total_characters }}</td>
+            <td>{{ snapshot.total_items_instances|floatformat:0 }}</td>
+            <td>{{ snapshot.total_items_quantity|floatformat:0 }}</td>
+            <td>
+              <a href="{% url 'server:snapshot_detail' snapshot.id %}" style="color: #4299e1; text-decoration: none;">
+                <i class="fas fa-eye"></i> {% trans "Ver" %}
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function createSnapshot() {
+  if (!confirm('{% trans "Deseja criar um snapshot do estado atual dos itens?" %}')) {
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('notes', 'Snapshot criado manualmente');
+
+  fetch('{% url "server:create_snapshot" %}', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert(data.message || '{% trans "Snapshot criado com sucesso!" %}');
+      location.reload();
+    } else {
+      alert(data.error || '{% trans "Erro ao criar snapshot" %}');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('{% trans "Erro ao criar snapshot" %}');
+  });
+}
+
+function openHelpModal() {
+  document.getElementById('helpModal').classList.add('active');
+}
+
+function closeHelpModal() {
+  document.getElementById('helpModal').classList.remove('active');
+}
+
+// Fechar modal ao clicar fora
+document.addEventListener('click', function(event) {
+  const modal = document.getElementById('helpModal');
+  if (event.target === modal) {
+    closeHelpModal();
+  }
+});
+
+// Fechar modal com ESC
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    closeHelpModal();
+  }
+});
+</script>
+
+<!-- Modal de Ajuda -->
+<div id="helpModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2><i class="fas fa-info-circle"></i> {% trans "Como Funciona o Sistema de Inflação" %}</h2>
+      <button class="modal-close" onclick="closeHelpModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-section">
+      <h3><i class="fas fa-lightbulb"></i> {% trans "O que é Inflação de Itens?" %}</h3>
+      <p>
+        {% trans "O sistema de inflação de itens monitora a quantidade e distribuição de todos os itens no servidor Lineage 2. Ele verifica onde os itens estão armazenados (inventário, baú, equipado, baú do clã ou no site) e permite acompanhar mudanças ao longo do tempo." %}
+      </p>
+    </div>
+
+    <div class="modal-section">
+      <h3><i class="fas fa-database"></i> {% trans "O que são Snapshots?" %}</h3>
+      <p>
+        {% trans "Snapshots são 'fotografias' do estado atual dos itens em um momento específico. Eles capturam:" %}
+      </p>
+      <ul>
+        <li><strong>{% trans "Quantidade total de cada item" %}</strong> - {% trans "Quantos de cada item existem no servidor" %}</li>
+        <li><strong>{% trans "Onde estão armazenados" %}</strong> - {% trans "Se estão no inventário, baú, equipados, baú do clã ou no site" %}</li>
+        <li><strong>{% trans "Quantos jogadores possuem" %}</strong> - {% trans "Número de personagens únicos que têm cada item" %}</li>
+        <li><strong>{% trans "Número de instâncias" %}</strong> - {% trans "Quantas vezes cada item aparece (útil para itens não empilháveis)" %}</li>
+      </ul>
+      <div class="feature-box">
+        <strong>{% trans "💡 Dica:" %}</strong>
+        {% trans "Crie snapshots diários para acompanhar a inflação ao longo do tempo. O sistema permite comparar dois snapshots para ver o que mudou." %}
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <h3><i class="fas fa-map-marker-alt"></i> {% trans "Localizações dos Itens" %}</h3>
+      <ul>
+        <li><strong>{% trans "INVENTORY" %}</strong> - {% trans "Itens no inventário dos personagens" %}</li>
+        <li><strong>{% trans "WAREHOUSE" %}</strong> - {% trans "Itens armazenados no baú pessoal" %}</li>
+        <li><strong>{% trans "PAPERDOLL" %}</strong> - {% trans "Itens equipados nos personagens" %}</li>
+        <li><strong>{% trans "CLANWH" %}</strong> - {% trans "Itens no baú do clã" %}</li>
+        <li><strong>{% trans "SITE" %}</strong> - {% trans "Itens armazenados no inventário do site" %}</li>
+      </ul>
+    </div>
+
+    <div class="modal-section">
+      <h3><i class="fas fa-tags"></i> {% trans "Categorias de Itens" %}</h3>
+      <p>
+        {% trans "Você pode criar categorias personalizadas para organizar a análise. Por exemplo:" %}
+      </p>
+      <ul>
+        <li><strong>{% trans "Armas" %}</strong> - {% trans "Espadas, arcos, cajados, etc." %}</li>
+        <li><strong>{% trans "Armaduras" %}</strong> - {% trans "Capacetes, peitorais, botas, etc." %}</li>
+        <li><strong>{% trans "Consumíveis" %}</strong> - {% trans "Poções, scrolls, etc." %}</li>
+        <li><strong>{% trans "Materiais" %}</strong> - {% trans "Cristais, gemas, etc." %}</li>
+      </ul>
+      <p>
+        {% trans "As categorias ajudam a analisar grupos de itens relacionados e identificar padrões de inflação." %}
+      </p>
+    </div>
+
+    <div class="modal-section">
+      <h3><i class="fas fa-chart-line"></i> {% trans "Análise de Inflação" %}</h3>
+      <p>
+        {% trans "O sistema permite analisar:" %}
+      </p>
+      <ul>
+        <li><strong>{% trans "Consumo" %}</strong> - {% trans "Quando a quantidade de itens diminui (uso, venda, etc.)" %}</li>
+        <li><strong>{% trans "Drop" %}</strong> - {% trans "Quando a quantidade aumenta (drops de monstros, recompensas, etc.)" %}</li>
+        <li><strong>{% trans "Armazenamento" %}</strong> - {% trans "Onde os itens estão sendo guardados" %}</li>
+        <li><strong>{% trans "Distribuição" %}</strong> - {% trans "Quantos jogadores possuem cada item" %}</li>
+      </ul>
+    </div>
+
+    <div class="modal-section">
+      <h3><i class="fas fa-sync-alt"></i> {% trans "Comparação de Snapshots" %}</h3>
+      <p>
+        {% trans "Ao comparar dois snapshots, você pode ver:" %}
+      </p>
+      <ul>
+        <li><strong>{% trans "Mudanças na quantidade" %}</strong> - {% trans "Quanto aumentou ou diminuiu cada item" %}</li>
+        <li><strong>{% trans "Percentual de variação" %}</strong> - {% trans "A variação percentual entre os períodos" %}</li>
+        <li><strong>{% trans "Itens que apareceram" %}</strong> - {% trans "Novos itens que não existiam antes" %}</li>
+        <li><strong>{% trans "Itens que desapareceram" %}</strong> - {% trans "Itens que foram consumidos ou removidos" %}</li>
+      </ul>
+    </div>
+
+    <div class="modal-section">
+      <h3><i class="fas fa-camera"></i> {% trans "Como Criar um Snapshot" %}</h3>
+      <ol style="color: #a0aec0; line-height: 1.8; padding-left: 1.5rem;">
+        <li>{% trans "Clique no botão 'Criar Snapshot'" %}</li>
+        <li>{% trans "O sistema irá verificar todos os inventários dos jogadores" %}</li>
+        <li>{% trans "Os dados serão salvos com a data atual" %}</li>
+        <li>{% trans "Você pode criar apenas um snapshot por dia" %}</li>
+        <li>{% trans "O snapshot ficará disponível para comparações futuras" %}</li>
+      </ol>
+    </div>
+
+    <div class="modal-section">
+      <h3><i class="fas fa-exclamation-triangle"></i> {% trans "Importante" %}</h3>
+      <div class="feature-box">
+        <strong>{% trans "⚠️ Atenção:" %}</strong>
+        {% trans "As queries são executadas diretamente no banco de dados do servidor Lineage 2. Dependendo do tamanho do servidor, pode levar alguns segundos para processar. Os dados são atualizados em tempo real quando você acessa o painel." %}
+      </div>
+      <div class="feature-box" style="border-left-color: #48bb78; margin-top: 1rem;">
+        <strong>{% trans "✅ Dica:" %}</strong>
+        {% trans "Crie snapshots regularmente (diariamente ou semanalmente) para ter um histórico completo da inflação de itens no servidor." %}
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 2px solid rgba(255, 255, 255, 0.1);">
+      <button onclick="closeHelpModal()" class="btn-create-snapshot" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <i class="fas fa-check"></i> {% trans "Entendi!" %}
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

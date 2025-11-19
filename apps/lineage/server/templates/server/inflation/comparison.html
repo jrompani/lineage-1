@@ -1,0 +1,302 @@
+{% extends "layouts/base.html" %}
+{% load i18n static %}
+{% load itens_extras %}
+
+{% block title %}{% trans "Comparação de Snapshots" %}{% endblock %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'css/dashboard-custom.css' %}">
+<style>
+  .inflation-container {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 100vh;
+    padding: 2rem 0;
+  }
+
+  .inflation-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .inflation-header h1 {
+    color: white;
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+    margin-right: 1rem;
+  }
+
+  .btn-back {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    color: white;
+  }
+
+  .btn-back:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(74, 85, 104, 0.4);
+  }
+
+  .btn-compare {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+  }
+
+  .btn-compare:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(72, 187, 120, 0.4);
+  }
+
+  .form-container {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  }
+
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-group label {
+    display: block;
+    color: #a0aec0;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+
+  .form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    color: white;
+    font-size: 1rem;
+  }
+
+  .form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .table-container {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    overflow-x: auto;
+  }
+
+  .table {
+    width: 100%;
+    color: white;
+    border-collapse: collapse;
+  }
+
+  .table th {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .table td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .table tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .change-positive {
+    color: #48bb78;
+    font-weight: 600;
+  }
+
+  .change-negative {
+    color: #f56565;
+    font-weight: 600;
+  }
+
+  .change-neutral {
+    color: #a0aec0;
+  }
+
+  .location-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 5px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .location-INVENTORY { background: #4299e1; }
+  .location-WAREHOUSE { background: #48bb78; }
+  .location-PAPERDOLL { background: #ed8936; }
+  .location-CLANWH { background: #9f7aea; }
+  .location-SITE { background: #f56565; }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .item-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .item-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+  }
+
+  .item-info-cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .item-name {
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .item-id {
+    color: #a0aec0;
+    font-size: 0.875rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="inflation-container">
+  <div class="container">
+    <div class="inflation-header">
+      <h1>{% trans "Comparação de Snapshots" %}</h1>
+      <div style="margin-top: 1rem;">
+        <a href="{% url 'server:inflation_dashboard' %}" class="btn btn-back">
+          <i class="fas fa-arrow-left"></i> {% trans "Voltar" %}
+        </a>
+      </div>
+    </div>
+
+    <div class="form-container">
+      <h2 style="color: white; margin-bottom: 1.5rem;">{% trans "Selecione os Snapshots para Comparar" %}</h2>
+      <form method="GET" action="{% url 'server:inflation_comparison' %}">
+        <div class="form-group">
+          <label for="from">{% trans "Snapshot Inicial (De)" %}</label>
+          <select id="from" name="from" required>
+            <option value="">{% trans "-- Selecione --" %}</option>
+            {% for snapshot in snapshots %}
+            <option value="{{ snapshot.id }}" {% if comparison and comparison.from.id == snapshot.id %}selected{% endif %}>
+              {{ snapshot.snapshot_date|date:"d/m/Y" }} - {{ snapshot.total_items_quantity|floatformat:0 }} itens
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="to">{% trans "Snapshot Final (Para)" %}</label>
+          <select id="to" name="to" required>
+            <option value="">{% trans "-- Selecione --" %}</option>
+            {% for snapshot in snapshots %}
+            <option value="{{ snapshot.id }}" {% if comparison and comparison.to.id == snapshot.id %}selected{% endif %}>
+              {{ snapshot.snapshot_date|date:"d/m/Y" }} - {{ snapshot.total_items_quantity|floatformat:0 }} itens
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-compare">
+          <i class="fas fa-chart-line"></i> {% trans "Comparar" %}
+        </button>
+      </form>
+    </div>
+
+    {% if comparison %}
+    <div class="table-container">
+      <h2 style="color: white; margin-bottom: 1.5rem;">
+        {% trans "Comparação" %}: {{ comparison.from.snapshot_date|date:"d/m/Y" }} → {{ comparison.to.snapshot_date|date:"d/m/Y" }}
+      </h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>{% trans "Item" %}</th>
+            <th>{% trans "Localização" %}</th>
+            <th>{% trans "Quantidade Inicial" %}</th>
+            <th>{% trans "Quantidade Final" %}</th>
+            <th>{% trans "Mudança" %}</th>
+            <th>{% trans "Variação %" %}</th>
+            <th>{% trans "Categoria" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in comparison.items %}
+          <tr>
+            <td>
+              <div class="item-row" style="border: none; padding: 0;">
+                <img src="{% item_image_url item.item_id %}" 
+                     alt="{{ item.item_name|default:'Item' }}" 
+                     class="item-icon">
+                <div class="item-info-cell">
+                  <span class="item-name">{{ item.item_name }}</span>
+                  <span class="item-id">ID: {{ item.item_id }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="location-badge location-{{ item.location }}">
+                {{ item.location }}
+              </span>
+            </td>
+            <td>{{ item.from_quantity|floatformat:0 }}</td>
+            <td>{{ item.to_quantity|floatformat:0 }}</td>
+            <td class="{% if item.change > 0 %}change-positive{% elif item.change < 0 %}change-negative{% else %}change-neutral{% endif %}">
+              {% if item.change > 0 %}+{% endif %}{{ item.change|floatformat:0 }}
+            </td>
+            <td class="{% if item.change_percentage > 0 %}change-positive{% elif item.change_percentage < 0 %}change-negative{% else %}change-neutral{% endif %}">
+              {% if item.change_percentage > 0 %}+{% endif %}{{ item.change_percentage }}%
+            </td>
+            <td>{{ item.category.name|default:"-" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" style="text-align: center; color: #a0aec0;">
+              {% trans "Nenhuma mudança encontrada." %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+

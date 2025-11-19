@@ -3,6 +3,7 @@ from .models import *
 from core.admin import BaseModelAdmin
 from django.contrib import messages
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 
 @admin.register(ApiEndpointToggle)
@@ -200,3 +201,63 @@ class AccountLinkSlotAdmin(BaseModelAdmin):
         """Otimiza a query incluindo o user"""
         qs = super().get_queryset(request)
         return qs.select_related("user")
+
+
+class ItemInflationSnapshotDetailInline(admin.TabularInline):
+    model = ItemInflationSnapshotDetail
+    extra = 0
+    readonly_fields = ('item_id', 'item_name', 'location', 'quantity', 'instances', 'unique_owners', 'category')
+    can_delete = False
+    fields = ('item_id', 'item_name', 'location', 'quantity', 'instances', 'unique_owners', 'category')
+    show_change_link = False
+
+
+@admin.register(ItemInflationCategory)
+class ItemInflationCategoryAdmin(BaseModelAdmin):
+    list_display = ('name', 'order', 'color', 'item_count')
+    list_editable = ('order',)
+    search_fields = ('name', 'description')
+    filter_horizontal = ()
+    
+    def item_count(self, obj):
+        return len(obj.item_ids) if obj.item_ids else 0
+    item_count.short_description = _('Item Count')
+
+
+@admin.register(ItemInflationSnapshot)
+class ItemInflationSnapshotAdmin(BaseModelAdmin):
+    list_display = ('snapshot_date', 'total_characters', 'total_items_instances', 'total_items_quantity', 'created_at')
+    list_filter = ('snapshot_date', 'created_at')
+    search_fields = ('notes',)
+    readonly_fields = ('snapshot_date', 'total_characters', 'total_items_instances', 'total_items_quantity', 'created_at', 'updated_at')
+    date_hierarchy = 'snapshot_date'
+    inlines = [ItemInflationSnapshotDetailInline]
+    
+    fieldsets = (
+        (_('Informações do Snapshot'), {
+            'fields': ('snapshot_date', 'total_characters', 'total_items_instances', 'total_items_quantity')
+        }),
+        (_('Observações'), {
+            'fields': ('notes',)
+        }),
+        (_('Datas'), {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(ItemInflationSnapshotDetail)
+class ItemInflationSnapshotDetailAdmin(BaseModelAdmin):
+    list_display = ('snapshot', 'item_id', 'item_name', 'location', 'quantity', 'instances', 'unique_owners', 'category')
+    list_filter = ('snapshot', 'location', 'category')
+    search_fields = ('item_name', 'item_id')
+    readonly_fields = ('snapshot', 'item_id', 'item_name', 'location', 'quantity', 'instances', 'unique_owners', 'category', 'created_at', 'updated_at')
+
+
+@admin.register(ItemInflationStats)
+class ItemInflationStatsAdmin(BaseModelAdmin):
+    list_display = ('item_id', 'item_name', 'location', 'current_quantity', 'previous_quantity', 'quantity_change', 'change_percentage', 'calculated_at')
+    list_filter = ('location', 'category', 'calculated_at')
+    search_fields = ('item_name', 'item_id')
+    readonly_fields = ('item_id', 'item_name', 'location', 'current_quantity', 'previous_quantity', 'quantity_change', 'change_percentage', 'calculated_at', 'created_at', 'updated_at')
