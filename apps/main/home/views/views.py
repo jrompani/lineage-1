@@ -3,6 +3,7 @@ import json, base64, logging, pyotp, os
 from ..models import *
 from ..forms import *
 from ..resource.twofa import gerar_qr_png
+from ..services.profile_rewards import build_profile_rewards_context
 
 from django.core.paginator import Paginator
 from django.core.mail import send_mail
@@ -238,6 +239,8 @@ def profile(request):
     if not account_is_linked:
         is_email_master_owner = True
     
+    reward_context = build_profile_rewards_context(request.user)
+
     context = {
         'segment': 'profile',
         'parent': 'home',
@@ -246,6 +249,7 @@ def profile(request):
         'account_is_linked': account_is_linked,
         'original_email_master_owner': original_email_master_owner,  # Para mostrar mensagem de desvinculação
     }
+    context.update(reward_context)
     return render(request, 'pages/profile.html', context)
 
 

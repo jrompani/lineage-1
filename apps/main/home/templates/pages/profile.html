@@ -22,7 +22,7 @@
   }
 
   .profile-header {
-    background: linear-gradient(135deg, #6f42c1, #e83e8c);
+    background: var(--cover-gradient, linear-gradient(135deg, #6f42c1, #e83e8c));
     color: white;
     padding: 3rem 2rem;
     text-align: center;
@@ -45,11 +45,72 @@
     height: 120px;
     border-radius: 50%;
     overflow: hidden;
-    border: 4px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    border: 4px solid transparent;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1)) padding-box,
+      var(--avatar-border-gradient, linear-gradient(135deg, #868e96, #495057)) border-box;
+    box-shadow:
+      0 8px 25px rgba(0, 0, 0, 0.2),
+      0 0 25px rgba(111, 66, 193, 0.25);
     margin: 0 auto 1.5rem;
     position: relative;
     z-index: 1;
+  }
+
+  .profile-avatar-container::after,
+  .profile-avatar-container::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+
+  .profile-avatar-container::after {
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.15);
+  }
+
+  .profile-avatar-container::before {
+    inset: -10px;
+    opacity: 0;
+    z-index: -1;
+  }
+
+  .profile-avatar-container[data-tier="silver"]::before {
+    opacity: 1;
+    background: radial-gradient(circle, rgba(209, 233, 255, 0.4), transparent 70%);
+    animation: orbitGlow 6s linear infinite;
+  }
+
+  .profile-avatar-container[data-tier="gold"]::before {
+    opacity: 1;
+    background: radial-gradient(circle, rgba(255, 214, 102, 0.25), transparent 65%);
+    box-shadow: 0 0 35px rgba(255, 214, 102, 0.35);
+    animation: goldPulse 4s ease-in-out infinite;
+  }
+
+  .profile-avatar-container[data-tier="mythic"]::before {
+    opacity: 1;
+    background: radial-gradient(circle, rgba(132, 94, 247, 0.35), transparent 60%);
+    box-shadow: 0 0 45px rgba(34, 184, 207, 0.4);
+    animation: cosmosWave 3s linear infinite;
+  }
+  @keyframes orbitGlow {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  @keyframes goldPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(255, 214, 102, 0.35); }
+    50% { box-shadow: 0 0 35px rgba(240, 119, 43, 0.45); }
+  }
+
+  @keyframes cosmosWave {
+    0% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); opacity: 0.7; }
   }
 
   .avatar-image {
@@ -351,6 +412,140 @@
     font-size: 1rem;
   }
 
+  .reward-section {
+    margin-bottom: 2.5rem;
+  }
+
+  .reward-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .reward-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 18px;
+    border: 2px solid #f1f3f5;
+    box-shadow: 0 4px 15px rgba(111, 66, 193, 0.08);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .reward-tier {
+    padding: 1.5rem;
+    color: white;
+    position: relative;
+  }
+
+  .reward-tier::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(255,255,255,0.35), transparent 60%);
+    pointer-events: none;
+  }
+
+  .reward-tier-label {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.85;
+  }
+
+  .reward-tier h5 {
+    margin: 0.5rem 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+  .reward-tier[data-tier="mythic"] h5 {
+    color: #f8f9fa;
+    text-shadow:
+      0 0 6px rgba(255, 255, 255, 0.8),
+      0 0 12px rgba(255, 255, 255, 0.6),
+      0 0 18px rgba(255, 255, 255, 0.4);
+  }
+
+  .reward-tier p {
+    margin: 0;
+    font-size: 0.95rem;
+    opacity: 0.95;
+  }
+
+  .reward-progress {
+    padding: 1.5rem;
+    border-top: 1px solid #f1f3f5;
+  }
+
+  .reward-progress-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .reward-progress-bar {
+    height: 12px;
+    border-radius: 999px;
+    background: #edf2ff;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+  }
+
+  .reward-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6f42c1, #e83e8c);
+    border-radius: 999px;
+    transition: width 0.4s ease;
+  }
+
+  .next-tier-text {
+    margin: 0.5rem 0 0;
+    font-size: 0.85rem;
+    color: #6c757d;
+  }
+
+  .reward-requirements {
+    list-style: none;
+    padding: 0 1.5rem 1.5rem;
+    margin: 0;
+  }
+
+  .requirement-item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid #f1f3f5;
+    align-items: flex-start;
+  }
+
+  .requirement-item:last-child {
+    border-bottom: none;
+  }
+
+  .requirement-item i {
+    font-size: 1.1rem;
+    margin-top: 0.15rem;
+    color: #adb5bd;
+  }
+
+  .requirement-item.met i {
+    color: #28a745;
+  }
+
+  .requirement-item span {
+    font-weight: 600;
+    color: #343a40;
+    display: block;
+  }
+
+  .requirement-item small {
+    display: block;
+    color: #6c757d;
+  }
+
   @keyframes verifiedPulse {
     0%, 100% {
       box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
@@ -403,8 +598,8 @@
       <div class="col-lg-10">
         <!-- Profile Header Card -->
         <div class="profile-card">
-          <div class="profile-header">
-            <div class="profile-avatar-container">
+          <div class="profile-header" style="--cover-gradient: {{ cover_reward.current_tier.gradient }};">
+            <div class="profile-avatar-container" style="--avatar-border-gradient: {{ avatar_reward.current_tier.gradient }};" data-tier="{{ avatar_reward.current_tier.slug }}">
               {% if user.avatar %}
                 <img src="{% url 'serve_files:serve_decrypted_file_with_timestamp' 'home' 'user' 'avatar' user.uuid timestamp %}"
                      alt="{% trans 'Imagem de perfil' %}" class="avatar-image">
@@ -458,6 +653,90 @@
                 </div>
               </div>
             {% endif %}
+
+            <!-- Reward Section -->
+            <div class="reward-section">
+              <h4><i class="fas fa-gift"></i> {% trans "Recompensas de Personalização" %}</h4>
+              <div class="reward-grid">
+                <div class="reward-card">
+                  <div class="reward-tier" style="background: {{ avatar_reward.current_tier.gradient }};">
+                    <div class="reward-tier-label">{% trans "Borda do Avatar" %}</div>
+                    <h5>{{ avatar_reward.current_tier.name }}</h5>
+                    <p>{{ avatar_reward.current_tier.description }}</p>
+                  </div>
+                  <div class="reward-progress">
+                    <div class="reward-progress-header">
+                      <span>{% trans "Progresso" %}</span>
+                      <span>{{ avatar_reward.progress_percent }}%</span>
+                    </div>
+                    <div class="reward-progress-bar">
+                      <div class="reward-progress-fill" style="width: {{ avatar_reward.progress_percent }}%;"></div>
+                    </div>
+                    {% if avatar_reward.next_tier %}
+                      <p class="next-tier-text">
+                        {% blocktrans with tier=avatar_reward.next_tier.name %}
+                        Próximo desbloqueio: {{ tier }}
+                        {% endblocktrans %}
+                      </p>
+                    {% else %}
+                      <p class="next-tier-text text-success">
+                        <i class="fas fa-crown me-1"></i>{% trans "Você atingiu o nível máximo desta recompensa!" %}
+                      </p>
+                    {% endif %}
+                  </div>
+                  <ul class="reward-requirements">
+                    {% for requirement in avatar_reward.requirements %}
+                      <li class="requirement-item {% if requirement.met %}met{% endif %}">
+                        <i class="fas {% if requirement.met %}fa-check-circle{% else %}fa-circle{% endif %}"></i>
+                        <div>
+                          <span>{{ requirement.label }}</span>
+                          <small>{{ requirement.description }}</small>
+                        </div>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+
+                <div class="reward-card">
+                  <div class="reward-tier" style="background: {{ cover_reward.current_tier.gradient }};" data-tier="{{ cover_reward.current_tier.slug }}">
+                    <div class="reward-tier-label">{% trans "Capa de Perfil" %}</div>
+                    <h5>{{ cover_reward.current_tier.name }}</h5>
+                    <p>{{ cover_reward.current_tier.description }}</p>
+                  </div>
+                  <div class="reward-progress">
+                    <div class="reward-progress-header">
+                      <span>{% trans "Progresso" %}</span>
+                      <span>{{ cover_reward.progress_percent }}%</span>
+                    </div>
+                    <div class="reward-progress-bar">
+                      <div class="reward-progress-fill" style="width: {{ cover_reward.progress_percent }}%;"></div>
+                    </div>
+                    {% if cover_reward.next_tier %}
+                      <p class="next-tier-text">
+                        {% blocktrans with tier=cover_reward.next_tier.name %}
+                        Próximo desbloqueio: {{ tier }}
+                        {% endblocktrans %}
+                      </p>
+                    {% else %}
+                      <p class="next-tier-text text-success">
+                        <i class="fas fa-crown me-1"></i>{% trans "Você atingiu o nível máximo desta recompensa!" %}
+                      </p>
+                    {% endif %}
+                  </div>
+                  <ul class="reward-requirements">
+                    {% for requirement in cover_reward.requirements %}
+                      <li class="requirement-item {% if requirement.met %}met{% endif %}">
+                        <i class="fas {% if requirement.met %}fa-check-circle{% else %}fa-circle{% endif %}"></i>
+                        <div>
+                          <span>{{ requirement.label }}</span>
+                          <small>{{ requirement.description }}</small>
+                        </div>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+            </div>
 
             <!-- Stats Grid -->
             <div class="stats-grid">
