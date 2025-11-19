@@ -1168,3 +1168,155 @@ class LineageMarketplace:
         sql = "UPDATE characters SET account_name = :new_account WHERE obj_Id = :char_id"
         result = LineageDB().update(sql, {"new_account": new_account, "char_id": char_id})
         return result is not None and result > 0
+
+
+class LineageInflation:
+    """
+    Classe para análise de inflação de itens no servidor.
+    Verifica todos os inventários dos jogadores, categoriza itens e rastreia onde estão armazenados.
+    Schema: Classic (usa item_type, amount, location)
+    """
+
+    @staticmethod
+    def _run_query(sql, params=None, use_cache=False):
+        return LineageDB().select(sql, params=params, use_cache=use_cache)
+
+    @staticmethod
+    @cache_lineage_result(timeout=60, use_cache=False)
+    def get_all_items_by_location():
+        """
+        Busca todos os itens de todos os personagens, agrupados por localização.
+        Schema: Classic (usa item_type, amount, location)
+        """
+        sql = """
+            SELECT 
+                i.item_type AS item_id,
+                i.amount AS quantity,
+                i.location,
+                i.owner_id,
+                c.char_name,
+                c.account_name,
+                CONCAT('Item ', i.item_type) AS item_name,
+                NULL AS item_category,
+                NULL AS crystal_type,
+                i.enchant_level AS enchant
+            FROM items i
+            INNER JOIN characters c ON c.obj_Id = i.owner_id
+            WHERE c.accesslevel = '0'
+            AND i.location IN ('INVENTORY', 'WAREHOUSE', 'PAPERDOLL', 'CLANWH')
+            ORDER BY i.location, i.item_type, c.char_name
+        """
+        return LineageInflation._run_query(sql)
+
+    @staticmethod
+    @cache_lineage_result(timeout=60, use_cache=False)
+    def get_items_summary_by_category():
+        """
+        Resumo de itens agrupados por categoria e localização.
+        Schema: Classic
+        """
+        sql = """
+            SELECT 
+                i.item_type AS item_id,
+                CONCAT('Item ', i.item_type) AS item_name,
+                NULL AS item_category,
+                NULL AS crystal_type,
+                i.location,
+                COUNT(*) AS total_instances,
+                SUM(i.amount) AS total_quantity,
+                COUNT(DISTINCT i.owner_id) AS unique_owners,
+                MIN(i.enchant_level) AS min_enchant,
+                MAX(i.enchant_level) AS max_enchant,
+                AVG(i.enchant_level) AS avg_enchant
+            FROM items i
+            INNER JOIN characters c ON c.obj_Id = i.owner_id
+            WHERE c.accesslevel = '0'
+            AND i.location IN ('INVENTORY', 'WAREHOUSE', 'PAPERDOLL', 'CLANWH')
+            GROUP BY i.item_type, i.location
+            ORDER BY total_quantity DESC, item_id ASC
+        """
+        return LineageInflation._run_query(sql)
+
+    @staticmethod
+    @cache_lineage_result(timeout=60, use_cache=False)
+    def get_items_by_character(char_id=None):
+        """Busca todos os itens de um personagem específico ou de todos."""
+        if char_id:
+            sql = """
+                SELECT 
+                    i.item_type AS item_id,
+                    i.amount AS quantity,
+                    i.location,
+                    i.owner_id,
+                    c.char_name,
+                    c.account_name,
+                    CONCAT('Item ', i.item_type) AS item_name,
+                    NULL AS item_category,
+                    i.enchant_level AS enchant
+                FROM items i
+                INNER JOIN characters c ON c.obj_Id = i.owner_id
+                WHERE i.owner_id = :char_id
+                AND i.location IN ('INVENTORY', 'WAREHOUSE', 'PAPERDOLL', 'CLANWH')
+                ORDER BY i.location, i.item_type
+            """
+            return LineageInflation._run_query(sql, {"char_id": char_id})
+        else:
+            return LineageInflation.get_all_items_by_location()
+
+    @staticmethod
+    @cache_lineage_result(timeout=60, use_cache=False)
+    def get_top_items_by_quantity(limit=100):
+        """Retorna os itens mais comuns no servidor."""
+        sql = """
+            SELECT 
+                i.item_type AS item_id,
+                CONCAT('Item ', i.item_type) AS item_name,
+                NULL AS item_category,
+                SUM(i.amount) AS total_quantity,
+                COUNT(DISTINCT i.owner_id) AS unique_owners,
+                COUNT(*) AS total_instances
+            FROM items i
+            INNER JOIN characters c ON c.obj_Id = i.owner_id
+            WHERE c.accesslevel = '0'
+            AND i.location IN ('INVENTORY', 'WAREHOUSE', 'PAPERDOLL', 'CLANWH')
+            GROUP BY i.item_type
+            ORDER BY total_quantity DESC
+            LIMIT :limit
+        """
+        return LineageInflation._run_query(sql, {"limit": limit})
+
+    @staticmethod
+    @cache_lineage_result(timeout=60, use_cache=False)
+    def get_items_by_location_summary():
+        """Resumo de itens por localização."""
+        sql = """
+            SELECT 
+                i.location,
+                COUNT(DISTINCT i.item_type) AS unique_item_types,
+                COUNT(*) AS total_instances,
+                SUM(i.amount) AS total_quantity,
+                COUNT(DISTINCT i.owner_id) AS unique_owners
+            FROM items i
+            INNER JOIN characters c ON c.obj_Id = i.owner_id
+            WHERE c.accesslevel = '0'
+            AND i.location IN ('INVENTORY', 'WAREHOUSE', 'PAPERDOLL', 'CLANWH')
+            GROUP BY i.location
+            ORDER BY i.location
+        """
+        return LineageInflation._run_query(sql)
+
+    @staticmethod
+    @cache_lineage_result(timeout=60, use_cache=False)
+    def get_site_items_count():
+        """Conta itens armazenados no site."""
+        return []
+
+    @staticmethod
+    @cache_lineage_result(timeout=60, use_cache=False)
+    def get_inflation_comparison(date_from=None, date_to=None):
+        """Compara a quantidade de itens entre duas datas."""
+        return {
+            "date_from": date_from,
+            "date_to": date_to,
+            "items": []
+        }

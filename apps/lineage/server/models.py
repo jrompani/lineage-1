@@ -402,3 +402,154 @@ class AccountLinkSlot(BaseModel):
 
     def __str__(self):
         return f"{self.user.username} - {self.slots_purchased} slot(s) - {self.purchase_date.strftime('%d/%m/%Y')}"
+
+
+class ItemInflationCategory(BaseModel):
+    """
+    Categorias de itens para análise de inflação.
+    """
+    name = models.CharField(max_length=100, unique=True, verbose_name=_("Category Name"))
+    description = models.TextField(blank=True, verbose_name=_("Description"))
+    item_ids = models.JSONField(
+        default=list,
+        help_text=_("List of item IDs that belong to this category"),
+        verbose_name=_("Item IDs")
+    )
+    color = models.CharField(
+        max_length=7,
+        default="#000000",
+        help_text=_("Hex color code for visualization"),
+        verbose_name=_("Color")
+    )
+    order = models.PositiveIntegerField(default=0, verbose_name=_("Order"))
+
+    class Meta:
+        verbose_name = _("Item Inflation Category")
+        verbose_name_plural = _("Item Inflation Categories")
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
+class ItemInflationSnapshot(BaseModel):
+    """
+    Snapshot diário da quantidade de itens no servidor.
+    Armazena o estado dos itens em um momento específico para comparação.
+    """
+    snapshot_date = models.DateField(unique=True, verbose_name=_("Snapshot Date"))
+    total_characters = models.PositiveIntegerField(default=0, verbose_name=_("Total Characters"))
+    total_items_instances = models.PositiveIntegerField(default=0, verbose_name=_("Total Item Instances"))
+    total_items_quantity = models.BigIntegerField(default=0, verbose_name=_("Total Items Quantity"))
+    notes = models.TextField(blank=True, verbose_name=_("Notes"))
+
+    class Meta:
+        verbose_name = _("Item Inflation Snapshot")
+        verbose_name_plural = _("Item Inflation Snapshots")
+        ordering = ['-snapshot_date']
+
+    def __str__(self):
+        return f"Snapshot {self.snapshot_date} - {self.total_items_quantity:,} items"
+
+
+class ItemInflationSnapshotDetail(BaseModel):
+    """
+    Detalhes de um snapshot - quantidade de cada item em cada localização.
+    """
+    snapshot = models.ForeignKey(
+        ItemInflationSnapshot,
+        on_delete=models.CASCADE,
+        related_name='details',
+        verbose_name=_("Snapshot")
+    )
+    item_id = models.PositiveIntegerField(verbose_name=_("Item ID"))
+    item_name = models.CharField(max_length=255, blank=True, verbose_name=_("Item Name"))
+    location = models.CharField(
+        max_length=20,
+        choices=[
+            ('INVENTORY', _('Inventory')),
+            ('WAREHOUSE', _('Warehouse')),
+            ('PAPERDOLL', _('Equipped')),
+            ('CLANWH', _('Clan Warehouse')),
+            ('SITE', _('Site Inventory')),
+        ],
+        verbose_name=_("Location")
+    )
+    quantity = models.BigIntegerField(default=0, verbose_name=_("Quantity"))
+    instances = models.PositiveIntegerField(default=0, verbose_name=_("Instances"))
+    unique_owners = models.PositiveIntegerField(default=0, verbose_name=_("Unique Owners"))
+    category = models.ForeignKey(
+        ItemInflationCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='snapshot_details',
+        verbose_name=_("Category")
+    )
+
+    class Meta:
+        verbose_name = _("Item Inflation Snapshot Detail")
+        verbose_name_plural = _("Item Inflation Snapshot Details")
+        unique_together = ['snapshot', 'item_id', 'location']
+        ordering = ['-quantity']
+        indexes = [
+            models.Index(fields=['snapshot', 'item_id']),
+            models.Index(fields=['snapshot', 'location']),
+            models.Index(fields=['snapshot', 'category']),
+        ]
+
+    def __str__(self):
+        return f"{self.item_name or f'Item {self.item_id}'} - {self.location} - {self.quantity:,}"
+
+
+class ItemInflationStats(BaseModel):
+    """
+    Estatísticas agregadas de inflação de itens.
+    Calcula variações entre snapshots.
+    """
+    item_id = models.PositiveIntegerField(verbose_name=_("Item ID"))
+    item_name = models.CharField(max_length=255, blank=True, verbose_name=_("Item Name"))
+    location = models.CharField(
+        max_length=20,
+        choices=[
+            ('INVENTORY', _('Inventory')),
+            ('WAREHOUSE', _('Warehouse')),
+            ('PAPERDOLL', _('Equipped')),
+            ('CLANWH', _('Clan Warehouse')),
+            ('SITE', _('Site Inventory')),
+        ],
+        verbose_name=_("Location")
+    )
+    current_quantity = models.BigIntegerField(default=0, verbose_name=_("Current Quantity"))
+    previous_quantity = models.BigIntegerField(default=0, verbose_name=_("Previous Quantity"))
+    quantity_change = models.BigIntegerField(default=0, verbose_name=_("Quantity Change"))
+    change_percentage = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Change Percentage")
+    )
+    calculated_at = models.DateTimeField(auto_now=True, verbose_name=_("Calculated At"))
+    category = models.ForeignKey(
+        ItemInflationCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='stats',
+        verbose_name=_("Category")
+    )
+
+    class Meta:
+        verbose_name = _("Item Inflation Statistic")
+        verbose_name_plural = _("Item Inflation Statistics")
+        unique_together = ['item_id', 'location']
+        ordering = ['-quantity_change']
+        indexes = [
+            models.Index(fields=['item_id', 'location']),
+            models.Index(fields=['location']),
+            models.Index(fields=['category']),
+        ]
+
+    def __str__(self):
+        change_sign = "+" if self.quantity_change >= 0 else ""
+        return f"{self.item_name or f'Item {self.item_id}'} - {self.location}: {change_sign}{self.quantity_change:,} ({self.change_percentage}%)"

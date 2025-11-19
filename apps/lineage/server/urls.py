@@ -4,6 +4,14 @@ from .views.accounts_views import *
 from .views.tops_views import *
 from .views.status_views import *
 from .views.services_views import *
+from .views.inflation_views import (
+    inflation_dashboard,
+    create_snapshot,
+    snapshot_detail,
+    inflation_comparison,
+    inflation_categories,
+    delete_snapshot,
+)
 
 app_name = 'server'
 
@@ -50,6 +58,14 @@ urlpatterns = [
     path('supporter/panel/staff/approve/<int:apoiador_id>/', aprovar_apoiador, name='aprovar_apoiador'),
     path('supporter/panel/staff/reject/<int:apoiador_id>/', rejeitar_apoiador, name='rejeitar_apoiador'),
     path('supporter/panel/staff/details/<int:apoiador_id>/', detalhes_apoiador, name='detalhes_apoiador'),
+    
+    # Inflation routes
+    path('inflation/', inflation_dashboard, name='inflation_dashboard'),
+    path('inflation/snapshot/create/', create_snapshot, name='create_snapshot'),
+    path('inflation/snapshot/<int:snapshot_id>/', snapshot_detail, name='snapshot_detail'),
+    path('inflation/snapshot/<int:snapshot_id>/delete/', delete_snapshot, name='delete_snapshot'),
+    path('inflation/comparison/', inflation_comparison, name='inflation_comparison'),
+    path('inflation/categories/', inflation_categories, name='inflation_categories'),
     
     path('api/', include('apps.lineage.server.urls_api')),
 ]

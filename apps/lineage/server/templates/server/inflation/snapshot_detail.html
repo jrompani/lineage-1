@@ -1,0 +1,279 @@
+{% extends "layouts/base.html" %}
+{% load i18n static %}
+{% load itens_extras %}
+
+{% block title %}{% trans "Detalhes do Snapshot" %}{% endblock %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'css/dashboard-custom.css' %}">
+<style>
+  .inflation-container {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 100vh;
+    padding: 2rem 0;
+  }
+
+  .inflation-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .inflation-header h1 {
+    color: white;
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+    margin-right: 1rem;
+  }
+
+  .btn-back {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    color: white;
+  }
+
+  .btn-back:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(74, 85, 104, 0.4);
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    border-radius: 15px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  }
+
+  .stat-card h3 {
+    color: #a0aec0;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .stat-value {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  .table-container {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    overflow-x: auto;
+  }
+
+  .table {
+    width: 100%;
+    color: white;
+    border-collapse: collapse;
+  }
+
+  .table th {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .table td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .table tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .location-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 5px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .location-INVENTORY { background: #4299e1; }
+  .location-WAREHOUSE { background: #48bb78; }
+  .location-PAPERDOLL { background: #ed8936; }
+  .location-CLANWH { background: #9f7aea; }
+  .location-SITE { background: #f56565; }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .item-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .item-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+  }
+
+  .item-info-cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .item-name {
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .item-id {
+    color: #a0aec0;
+    font-size: 0.875rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="inflation-container">
+  <div class="container">
+    <div class="inflation-header">
+      <h1>{% trans "Snapshot" %} - {{ snapshot.snapshot_date|date:"d/m/Y" }}</h1>
+      <div style="margin-top: 1rem;">
+        <a href="{% url 'server:inflation_dashboard' %}" class="btn btn-back">
+          <i class="fas fa-arrow-left"></i> {% trans "Voltar" %}
+        </a>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>{% trans "Personagens" %}</h3>
+        <p class="stat-value">{{ snapshot.total_characters }}</p>
+      </div>
+      <div class="stat-card">
+        <h3>{% trans "Instâncias" %}</h3>
+        <p class="stat-value">{{ snapshot.total_items_instances|floatformat:0 }}</p>
+      </div>
+      <div class="stat-card">
+        <h3>{% trans "Quantidade Total" %}</h3>
+        <p class="stat-value">{{ snapshot.total_items_quantity|floatformat:0 }}</p>
+      </div>
+    </div>
+
+    {% if by_location %}
+    <div class="table-container">
+      <h2 style="color: white; margin-bottom: 1.5rem;">{% trans "Resumo por Localização" %}</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>{% trans "Localização" %}</th>
+            <th>{% trans "Itens Únicos" %}</th>
+            <th>{% trans "Instâncias" %}</th>
+            <th>{% trans "Quantidade Total" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for location, data in by_location.items %}
+          <tr>
+            <td>
+              <span class="location-badge location-{{ location }}">
+                {{ location }}
+              </span>
+            </td>
+            <td>{{ data.unique_items }}</td>
+            <td>{{ data.total_instances|floatformat:0 }}</td>
+            <td>{{ data.total_quantity|floatformat:0 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <div class="table-container">
+      <h2 style="color: white; margin-bottom: 1.5rem;">{% trans "Top 100 Itens" %}</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>{% trans "Item" %}</th>
+            <th>{% trans "Localização" %}</th>
+            <th>{% trans "Quantidade" %}</th>
+            <th>{% trans "Instâncias" %}</th>
+            <th>{% trans "Proprietários" %}</th>
+            <th>{% trans "Categoria" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for detail in details %}
+          <tr>
+            <td>
+              <div class="item-row" style="border: none; padding: 0;">
+                <img src="{% item_image_url detail.item_id %}" 
+                     alt="{{ detail.item_name|default:'Item' }}" 
+                     class="item-icon">
+                <div class="item-info-cell">
+                  <span class="item-name">{{ detail.item_name|default:"Item Desconhecido" }}</span>
+                  <span class="item-id">ID: {{ detail.item_id }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="location-badge location-{{ detail.location }}">
+                {{ detail.location }}
+              </span>
+            </td>
+            <td>{{ detail.quantity|floatformat:0 }}</td>
+            <td>{{ detail.instances }}</td>
+            <td>{{ detail.unique_owners }}</td>
+            <td>{{ detail.category.name|default:"-" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" style="text-align: center; color: #a0aec0;">
+              {% trans "Nenhum detalhe disponível." %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if snapshot.notes %}
+    <div class="table-container">
+      <h2 style="color: white; margin-bottom: 1rem;">{% trans "Observações" %}</h2>
+      <p style="color: #a0aec0;">{{ snapshot.notes }}</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
