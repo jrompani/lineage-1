@@ -8,23 +8,26 @@
   /* Fallback styles for summary cards */
   .report-container .summary-card {
     background: #ffffff !important;
-    border-radius: 16px !important;
-    padding: 1.75rem !important;
+    border-radius: 12px !important;
+    padding: 1rem 1.25rem !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04) !important;
     display: flex !important;
     align-items: center !important;
-    gap: 1.25rem !important;
+    gap: 1rem !important;
     border: 1px solid #e9ecef !important;
     margin-bottom: 0 !important;
+    min-height: 80px !important;
+    overflow: hidden !important;
   }
   .report-container .summary-icon {
-    width: 70px !important;
-    height: 70px !important;
-    border-radius: 16px !important;
+    width: 55px !important;
+    height: 55px !important;
+    min-width: 55px !important;
+    border-radius: 12px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 1.75rem !important;
+    font-size: 1.35rem !important;
     color: white !important;
     flex-shrink: 0 !important;
   }
@@ -34,19 +37,95 @@
   .report-container .summary-icon.bg-warning { background: linear-gradient(135deg, #ffc107, #e0a800) !important; }
   .report-container .summary-icon.bg-danger { background: linear-gradient(135deg, #dc3545, #c82333) !important; }
   .report-container .summary-icon.bg-secondary { background: linear-gradient(135deg, #6c757d, #545b62) !important; }
+  .report-container .summary-content {
+    flex: 1 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
   .report-container .summary-label {
-    font-size: 0.75rem !important;
+    font-size: 0.65rem !important;
     color: #6c757d !important;
     font-weight: 600 !important;
     text-transform: uppercase !important;
-    margin-bottom: 0.5rem !important;
+    margin-bottom: 0.35rem !important;
     display: block !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    letter-spacing: 0.3px !important;
   }
   .report-container .summary-value {
-    font-size: 1.75rem !important;
-    font-weight: 800 !important;
+    font-size: clamp(0.95rem, 1.5vw, 1.25rem) !important;
+    font-weight: 700 !important;
     color: #212529 !important;
     display: block !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    line-height: 1.2 !important;
+    max-width: 100% !important;
+  }
+  
+  /* Pagination Styles */
+  .report-container .pagination {
+    margin-top: 2rem !important;
+  }
+  .report-container .pagination .page-link {
+    color: #28a745 !important;
+    border-color: #e9ecef !important;
+    padding: 0.75rem 1rem !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+  }
+  .report-container .pagination .page-link:hover {
+    background-color: #28a745 !important;
+    color: white !important;
+    border-color: #28a745 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3) !important;
+  }
+  .report-container .pagination .page-item.active .page-link {
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+    color: white !important;
+    font-weight: 600 !important;
+  }
+  .report-container .pagination .page-item.disabled .page-link {
+    color: #6c757d !important;
+    background-color: #f8f9fa !important;
+    border-color: #e9ecef !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
+  }
+  
+  /* Filter Styles */
+  .report-container .report-filters {
+    padding: 0 2.5rem;
+  }
+  .report-container .report-filters .card {
+    border-radius: 12px !important;
+    overflow: hidden !important;
+  }
+  .report-container .report-filters .card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+    border-bottom: 2px solid #dee2e6 !important;
+    padding: 1rem 1.5rem !important;
+  }
+  .report-container .report-filters .card-header h6 {
+    margin: 0 !important;
+    font-weight: 600 !important;
+    color: #495057 !important;
+  }
+  .report-container .report-filters .card-body {
+    padding: 1.5rem !important;
+  }
+  .report-container .report-filters label {
+    font-weight: 500 !important;
+    color: #495057 !important;
+    margin-bottom: 0.5rem !important;
+    font-size: 0.875rem !important;
   }
 </style>
 {% endblock extrastyle %}
@@ -168,6 +247,50 @@
                     <div class="summary-value">{{ resumo.percentual_diferenca_geral|floatformat:2 }}%</div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+          
+          <!-- Filtros -->
+          {% if filter_form %}
+          <div class="report-filters mt-4 mb-4">
+            <div class="card border-0 shadow-sm">
+              <div class="card-header bg-light">
+                <h6 class="mb-0">
+                  <i class="fas fa-filter me-2"></i>
+                  {% trans "Filtros" %}
+                </h6>
+              </div>
+              <div class="card-body">
+                <form method="get" class="row g-3">
+                  <div class="col-md-4">
+                    {{ filter_form.usuario.label_tag }}
+                    {{ filter_form.usuario }}
+                  </div>
+                  <div class="col-md-4">
+                    {{ filter_form.status.label_tag }}
+                    {{ filter_form.status }}
+                  </div>
+                  <div class="col-md-4">
+                    {{ filter_form.diferenca_minima.label_tag }}
+                    {{ filter_form.diferenca_minima }}
+                  </div>
+                  <div class="col-md-4">
+                    {{ filter_form.diferenca_maxima.label_tag }}
+                    {{ filter_form.diferenca_maxima }}
+                  </div>
+                  <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                      <i class="fas fa-search me-2"></i>
+                      {% trans "Filtrar" %}
+                    </button>
+                    <a href="{% url 'accountancy:relatorio_reconciliacao_wallet' %}" class="btn btn-outline-secondary">
+                      <i class="fas fa-times me-2"></i>
+                      {% trans "Limpar Filtros" %}
+                    </a>
+                  </div>
+                </form>
               </div>
             </div>
           </div>
@@ -319,6 +442,80 @@
                 </tbody>
               </table>
             </div>
+            
+            <!-- Paginação -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="{% trans 'Navegação de páginas' %}" class="mt-4">
+              <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                  <li class="page-item">
+                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1" aria-label="{% trans 'Primeira página' %}">
+                      <i class="fas fa-angle-double-left"></i>
+                      <span class="ms-1 d-none d-sm-inline">{% trans "Primeira" %}</span>
+                    </a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" aria-label="{% trans 'Página anterior' %}">
+                      <i class="fas fa-angle-left"></i>
+                      <span class="ms-1 d-none d-sm-inline">{% trans "Anterior" %}</span>
+                    </a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled">
+                    <span class="page-link">
+                      <i class="fas fa-angle-double-left"></i>
+                      <span class="ms-1 d-none d-sm-inline">{% trans "Primeira" %}</span>
+                    </span>
+                  </li>
+                  <li class="page-item disabled">
+                    <span class="page-link">
+                      <i class="fas fa-angle-left"></i>
+                      <span class="ms-1 d-none d-sm-inline">{% trans "Anterior" %}</span>
+                    </span>
+                  </li>
+                {% endif %}
+
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    {% trans "Página" %} {{ page_obj.number }} {% trans "de" %} {{ page_obj.paginator.num_pages }}
+                  </span>
+                </li>
+
+                {% if page_obj.has_next %}
+                  <li class="page-item">
+                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" aria-label="{% trans 'Próxima página' %}">
+                      <span class="me-1 d-none d-sm-inline">{% trans "Próxima" %}</span>
+                      <i class="fas fa-angle-right"></i>
+                    </a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}" aria-label="{% trans 'Última página' %}">
+                      <span class="me-1 d-none d-sm-inline">{% trans "Última" %}</span>
+                      <i class="fas fa-angle-double-right"></i>
+                    </a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled">
+                    <span class="page-link">
+                      <span class="me-1 d-none d-sm-inline">{% trans "Próxima" %}</span>
+                      <i class="fas fa-angle-right"></i>
+                    </span>
+                  </li>
+                  <li class="page-item disabled">
+                    <span class="page-link">
+                      <span class="me-1 d-none d-sm-inline">{% trans "Última" %}</span>
+                      <i class="fas fa-angle-double-right"></i>
+                    </span>
+                  </li>
+                {% endif %}
+              </ul>
+              <div class="text-center mt-2">
+                <small class="text-muted">
+                  {% trans "Mostrando" %} {{ page_obj.start_index }} {% trans "até" %} {{ page_obj.end_index }} {% trans "de" %} {{ page_obj.paginator.count }} {% trans "carteiras" %}
+                </small>
+              </div>
+            </nav>
+            {% endif %}
 
             <div class="text-center mt-4">
               <a href="{% url 'accountancy:dashboard' %}" class="report-back-button">
