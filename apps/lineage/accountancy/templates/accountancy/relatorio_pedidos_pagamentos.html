@@ -280,6 +280,54 @@
                 </div>
               </div>
             </div>
+            <div class="row g-3 mt-2">
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon bg-warning">
+                    <i class="fas fa-clock"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Pendentes" %}</div>
+                    <div class="summary-value">{{ resumo.status_contador.pendente }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon bg-danger">
+                    <i class="fas fa-times-circle"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Cancelados" %}</div>
+                    <div class="summary-value">{{ resumo.status_contador.cancelado }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon bg-info">
+                    <i class="fas fa-spinner"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Processando" %}</div>
+                    <div class="summary-value">{{ resumo.status_contador.processando }}</div>
+                  </div>
+                </div>
+              </div>
+              {% if resumo.status_contador.outros > 0 %}
+              <div class="col-md-3">
+                <div class="summary-card">
+                  <div class="summary-icon bg-secondary">
+                    <i class="fas fa-question-circle"></i>
+                  </div>
+                  <div class="summary-content">
+                    <div class="summary-label">{% trans "Outros Status" %}</div>
+                    <div class="summary-value">{{ resumo.status_contador.outros }}</div>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+            </div>
           </div>
           {% endif %}
           

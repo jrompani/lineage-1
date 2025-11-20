@@ -8,14 +8,18 @@ def pedidos_pagamentos_resumo(pedidos=None):
     if pedidos is None:
         pedidos = PedidoPagamento.objects.all().select_related('usuario').order_by('-data_criacao')
 
-    # FILTRO IMPORTANTE: Para cálculos financeiros, consideramos apenas pedidos CONFIRMADOS
+    # FILTRO IMPORTANTE: Para cálculos financeiros, consideramos apenas pedidos CONFIRMADOS/CONCLUÍDOS
     # Isso garante que os totais representem apenas faturamento real
-    # Aplica o filtro de CONFIRMADO sobre o queryset passado (que pode já estar filtrado)
-    pedidos_confirmados = pedidos.filter(status='CONFIRMADO')
+    # CONCLUÍDO é usado no fluxo do Mercado Pago e é equivalente a CONFIRMADO
+    # Aplica o filtro sobre o queryset passado (que pode já estar filtrado)
+    pedidos_confirmados = pedidos.filter(status__in=['CONFIRMADO', 'CONCLUÍDO', 'CONCLUIDO'])
 
     # Mapeamento de status do modelo para o template
+    # CONCLUÍDO é usado no fluxo do Mercado Pago e é equivalente a CONFIRMADO
     status_mapping = {
         'CONFIRMADO': 'aprovado',
+        'CONCLUÍDO': 'aprovado',  # Status usado no fluxo do Mercado Pago
+        'CONCLUIDO': 'aprovado',   # Variação sem acento (por segurança)
         'PENDENTE': 'pendente',
         'FALHOU': 'cancelado',
         'PROCESSANDO': 'processando',
@@ -37,13 +41,20 @@ def pedidos_pagamentos_resumo(pedidos=None):
     # Isso permite ver o resumo geral mesmo quando há filtros aplicados
     todos_pedidos = PedidoPagamento.objects.all()
     contador_status_raw = todos_pedidos.values('status').annotate(count=Count('id'))
-    contador_status = {'aprovado': 0, 'pendente': 0, 'cancelado': 0, 'processando': 0}
+    contador_status = {'aprovado': 0, 'pendente': 0, 'cancelado': 0, 'processando': 0, 'outros': 0}
     
+    # Mapeia os status conhecidos e agrupa os desconhecidos em "outros"
     for item in contador_status_raw:
         status_original = item['status']
-        status_mapeado = status_mapping.get(status_original, status_original.lower())
-        if status_mapeado in contador_status:
-            contador_status[status_mapeado] = item['count']
+        status_mapeado = status_mapping.get(status_original)
+        
+        if status_mapeado:
+            # Status conhecido, adiciona ao contador
+            if status_mapeado in contador_status:
+                contador_status[status_mapeado] += item['count']
+        else:
+            # Status desconhecido, adiciona a "outros"
+            contador_status['outros'] += item['count']
 
     # Calcula totais financeiros APENAS de pedidos CONFIRMADOS
     # Usando aggregate para eficiência e precisão
