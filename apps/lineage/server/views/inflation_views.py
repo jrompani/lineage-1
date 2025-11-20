@@ -445,7 +445,7 @@ def delete_snapshot(request, snapshot_id):
 @staff_required
 def all_items_list(request):
     """
-    Lista todos os itens do servidor com paginação.
+    Lista todos os itens do servidor com paginação e filtros.
     """
     LineageInflation = get_query_class("LineageInflation")
     
@@ -457,7 +457,7 @@ def all_items_list(request):
         print(f"Erro ao buscar todos os itens: {e}")
         all_items = []
     
-    # Busca favoritos do usuário ANTES da paginação
+    # Busca favoritos do usuário
     favorite_item_ids = set()
     if request.user.is_authenticated:
         favorite_item_ids = set(
@@ -465,7 +465,7 @@ def all_items_list(request):
             .values_list('item_id', flat=True)
         )
     
-    # Marca itens favoritos antes da paginação
+    # Marca itens favoritos
     for item in all_items:
         item_id = item.get('item_id')
         if item_id is not None:
@@ -477,15 +477,63 @@ def all_items_list(request):
         else:
             item['is_favorite'] = False
     
+    # Aplicar filtros
+    search_query = request.GET.get('search', '').strip().lower()
+    sort_by = request.GET.get('sort', 'quantity')  # quantity, owners, instances, name
+    min_quantity = request.GET.get('min_quantity', '').strip()
+    favorites_only = request.GET.get('favorites_only', '').strip() == '1'
+    
+    filtered_items = all_items.copy()
+    
+    # Filtro por busca (nome ou ID)
+    if search_query:
+        filtered_items = [
+            item for item in filtered_items
+            if (search_query in (item.get('item_name') or '').lower() or
+                search_query in str(item.get('item_id', '')).lower())
+        ]
+    
+    # Filtro por quantidade mínima
+    if min_quantity and min_quantity.isdigit():
+        min_qty = int(min_quantity)
+        filtered_items = [
+            item for item in filtered_items
+            if item.get('total_quantity', 0) >= min_qty
+        ]
+    
+    # Filtro por favoritos apenas
+    if favorites_only and request.user.is_authenticated:
+        filtered_items = [
+            item for item in filtered_items
+            if item.get('is_favorite', False)
+        ]
+    
+    # Ordenação
+    if sort_by == 'quantity':
+        filtered_items.sort(key=lambda x: x.get('total_quantity', 0), reverse=True)
+    elif sort_by == 'owners':
+        filtered_items.sort(key=lambda x: x.get('unique_owners', 0), reverse=True)
+    elif sort_by == 'instances':
+        filtered_items.sort(key=lambda x: x.get('total_instances', 0), reverse=True)
+    elif sort_by == 'name':
+        filtered_items.sort(key=lambda x: (x.get('item_name') or '').lower())
+    
     # Paginação
-    paginator = Paginator(all_items, 50)  # 50 itens por página
+    paginator = Paginator(filtered_items, 50)  # 50 itens por página
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
     context = {
         'page_obj': page_obj,
         'total_items': len(all_items),
+        'filtered_items': len(filtered_items),
         'favorite_item_ids': favorite_item_ids,
+        'filters': {
+            'search': request.GET.get('search', ''),
+            'sort': sort_by,
+            'min_quantity': request.GET.get('min_quantity', ''),
+            'favorites_only': favorites_only,
+        },
     }
     
     return render(request, 'server/inflation/all_items.html', context)
@@ -615,10 +663,16 @@ def inflation_dashboard(request):
                 all_items = enrich_items_with_names(all_items_raw)
                 
                 # Filtra apenas os favoritos
-                favorite_items = [
-                    item for item in all_items 
-                    if item.get('item_id') in favorite_item_ids
-                ]
+                favorite_items = []
+                for item in all_items:
+                    item_id = item.get('item_id')
+                    if item_id is not None:
+                        try:
+                            item_id_int = int(item_id)
+                            if item_id_int in favorite_item_ids:
+                                favorite_items.append(item)
+                        except (ValueError, TypeError):
+                            continue
                 # Ordena por quantidade
                 favorite_items.sort(key=lambda x: x.get('total_quantity', 0), reverse=True)
             except Exception as e:

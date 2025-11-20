@@ -350,9 +350,13 @@
   }
 
   .favorite-btn.active {
-    background: rgba(251, 191, 36, 0.2);
-    border-color: #fbbf24;
-    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.2) !important;
+    border-color: #fbbf24 !important;
+    color: #fbbf24 !important;
+  }
+  
+  .favorite-btn.active i {
+    color: #fbbf24 !important;
   }
 </style>
 {% endblock %}
@@ -491,8 +495,7 @@
             <td>
               <button class="favorite-btn active" 
                       onclick="toggleFavorite({{ item.item_id|unlocalize }}, this)"
-                      data-item-id="{{ item.item_id|unlocalize }}"
-                      style="background: transparent; border: 2px solid rgba(255, 255, 255, 0.3); color: #a0aec0; padding: 0.5rem; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 1.2rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                      data-item-id="{{ item.item_id|unlocalize }}">
                 <i class="fas fa-star"></i>
               </button>
             </td>
@@ -550,8 +553,7 @@
             <td>
               <button class="favorite-btn {% if item.item_id in favorite_item_ids %}active{% endif %}" 
                       onclick="toggleFavorite({{ item.item_id|unlocalize }}, this)"
-                      data-item-id="{{ item.item_id|unlocalize }}"
-                      style="background: transparent; border: 2px solid rgba(255, 255, 255, 0.3); color: #a0aec0; padding: 0.5rem; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 1.2rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                      data-item-id="{{ item.item_id|unlocalize }}">
                 <i class="fas fa-star"></i>
               </button>
             </td>
